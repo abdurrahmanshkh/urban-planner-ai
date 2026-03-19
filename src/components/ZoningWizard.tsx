@@ -1,11 +1,9 @@
-// src/components/ZoningWizard.tsx
 "use client";
 
 import { useEffect, useState } from "react";
-import { Users, IndianRupee, Map as MapIcon, ShieldCheck } from "lucide-react";
+import { Users, IndianRupee, ShieldCheck, AlertTriangle } from "lucide-react";
 import { usePlanStore } from "@/store/usePlanStore";
 import { AMENITY_CONFIG, calculateIdealAmenities } from "@/lib/planningMath";
-import { AlertTriangle } from "lucide-react";
 
 export default function ZoningWizard() {
   const { 
@@ -16,44 +14,37 @@ export default function ZoningWizard() {
 
   const [idealAmenities, setIdealAmenities] = useState<Record<string, number>>({});
 
-  // Instantly recalculate ideal amenities when population or grid size changes
   useEffect(() => {
     const ideals = calculateIdealAmenities(population, gridSize);
     setIdealAmenities(ideals);
     
-    // Auto-fill the user's selected amenities if they haven't touched them yet
     if (Object.values(amenities).every(v => v === 0)) {
       Object.entries(ideals).forEach(([key, val]) => setAmenityCount(key, val));
     }
   }, [population, gridSize]);
 
-  // Format INR nicely
   const formatINR = (value: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0
-    }).format(value);
+    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(value);
   };
 
   const activeCellsCount = Object.values(usePlanStore.getState().gridData).filter(c => c.type !== 'disabled').length;
-  // Fallback to total grid if map hasn't been parsed yet
   const usableCells = activeCellsCount > 0 ? activeCellsCount : gridSize * gridSize; 
-  const MAX_POPULATION = usableCells * 1500; // Max 1,500 people per block
+  const MAX_POPULATION = usableCells * 1500;
   const isOverpopulated = population > MAX_POPULATION;
 
+  // BUG FIX: Added max-h-full and ensured the parent div is a flex column
   return (
-    <div className="flex flex-col h-full bg-surface rounded-2xl border border-slate-200 shadow-soft overflow-hidden p-6">
-      <div className="mb-6">
+    <div className="flex flex-col h-full max-h-full bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-6">
+      <div className="mb-6 shrink-0">
         <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-          <ShieldCheck className="text-primary" />
+          <ShieldCheck className="text-indigo-600" />
           Zoning Parameters
         </h2>
         <p className="text-slate-500 text-sm mt-1">Define demographics to generate algorithmic recommendations.</p>
       </div>
 
-      <div className="space-y-6 flex-1 overflow-y-auto pr-2">
-        {/* Input: Expected Population */}
+      {/* BUG FIX: Added min-h-0 to allow flex scrolling */}
+      <div className="space-y-6 flex-1 overflow-y-auto pr-2 min-h-0 pb-4">
         <div>
           <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
             <Users size={16} className="text-slate-400" /> Expected Population
@@ -66,17 +57,16 @@ export default function ZoningWizard() {
             disabled={isGridLocked}
             onChange={(e) => setPopulation(Number(e.target.value))}
             className={`w-full px-4 py-3 rounded-xl border outline-none transition-all disabled:bg-slate-50 disabled:text-slate-400 ${
-              isOverpopulated ? 'border-red-500 focus:ring-red-200' : 'border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary-light'
+              isOverpopulated ? 'border-red-500 focus:ring-red-200' : 'border-slate-200 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100'
             }`}
           />
           {isOverpopulated && (
             <p className="text-xs text-red-500 mt-2 font-medium flex items-center gap-1">
-              <AlertTriangle size={12} /> Exceeds maximum density! Max allowed for this grid is {MAX_POPULATION.toLocaleString()}.
+              <AlertTriangle size={12} /> Exceeds maximum density! Max allowed is {MAX_POPULATION.toLocaleString()}.
             </p>
           )}
         </div>
 
-        {/* Input: Total Land Value */}
         <div>
           <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
             <IndianRupee size={16} className="text-slate-400" /> Total Base Land Value (₹)
@@ -88,16 +78,13 @@ export default function ZoningWizard() {
             value={totalLandValue}
             disabled={isGridLocked}
             onChange={(e) => setTotalLandValue(Number(e.target.value))}
-            className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary-light outline-none transition-all disabled:bg-slate-50 disabled:text-slate-400"
+            className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 outline-none transition-all disabled:bg-slate-50 disabled:text-slate-400"
           />
-          <p className="text-xs text-slate-500 mt-2 font-medium">
-            Formatted: {formatINR(totalLandValue)}
-          </p>
+          <p className="text-xs text-slate-500 mt-2 font-medium">Formatted: {formatINR(totalLandValue)}</p>
         </div>
 
         <hr className="border-slate-100" />
 
-        {/* Dynamic Sliders */}
         <div>
           <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4">Infrastructure Requirements</h3>
           <div className="space-y-5">
@@ -112,7 +99,7 @@ export default function ZoningWizard() {
                     <span className="font-medium text-slate-700 flex items-center gap-2">
                       <span>{amenity.icon}</span> {amenity.name}
                     </span>
-                    <span className={`text-sm font-bold px-2 py-1 rounded-md ${deficit ? 'bg-red-100 text-red-700' : 'bg-success-light text-success'}`}>
+                    <span className={`text-sm font-bold px-2 py-1 rounded-md ${deficit ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
                       {current} / {ideal} Ideal
                     </span>
                   </div>
@@ -123,7 +110,7 @@ export default function ZoningWizard() {
                     value={current}
                     disabled={isGridLocked}
                     onChange={(e) => setAmenityCount(amenity.id, Number(e.target.value))}
-                    className="w-full accent-primary"
+                    className="w-full accent-indigo-600"
                   />
                 </div>
               );
@@ -132,8 +119,8 @@ export default function ZoningWizard() {
         </div>
       </div>
 
-      {/* Lock Action */}
-      <button 
+      <div className="mt-4 pt-4 border-t border-slate-100 shrink-0">
+        <button 
           disabled={isOverpopulated}
           onClick={async () => {
             if (isGridLocked) {
@@ -143,16 +130,18 @@ export default function ZoningWizard() {
               await generateCityPlan();
             }
           }}
+          // BUG FIX: Removed reliance on custom config, explicitly declared bg-indigo-600 and text-white
           className={`w-full py-3 rounded-xl font-bold transition-all flex justify-center items-center gap-2 ${
             isOverpopulated 
               ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
               : isGridLocked 
                 ? 'bg-slate-200 text-slate-700 hover:bg-slate-300' 
-                : 'bg-primary text-white hover:bg-primary-hover shadow-md shadow-primary/20'
+                : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-600/20'
           }`}
         >
           {isGridLocked ? "Unlock Parameters" : "Lock & Generate Plan ⚡"}
         </button>
+      </div>
     </div>
   );
 }

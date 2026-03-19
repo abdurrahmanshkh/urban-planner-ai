@@ -99,7 +99,7 @@ export default function GridVisualizer() {
         </div>
       </div>
 
-      <div className="flex-1 relative flex gap-6">
+      <div className="flex-1 relative flex gap-6 min-h-0">
         {!hasGridData ? (
           <div className="flex-1"><MapProcessor /></div>
         ) : (

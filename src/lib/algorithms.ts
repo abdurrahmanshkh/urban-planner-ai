@@ -1,4 +1,3 @@
-// src/lib/algorithms.ts
 import { GridCell, CellType } from "@/store/usePlanStore";
 
 // Helper: Manhattan Distance
@@ -6,7 +5,7 @@ const getDistance = (x1: number, y1: number, x2: number, y2: number) => {
   return Math.abs(x1 - x2) + Math.abs(y1 - y2);
 };
 
-// 1. ZONING ALGORITHM (Constraint Satisfaction)
+// 1. ZONING ALGORITHM
 export function placeAmenities(
   gridSize: number,
   initialGrid: Record<string, GridCell>,
@@ -17,37 +16,31 @@ export function placeAmenities(
   
   if (activeCells.length === 0) return grid;
 
-  // Calculate Grid Center
   const centerX = gridSize / 2;
   const centerY = gridSize / 2;
 
-  // Sort active cells by distance to center
   const centerSortedCells = [...activeCells].sort(
     (a, b) => getDistance(a.x, a.y, centerX, centerY) - getDistance(b.x, b.y, centerX, centerY)
   );
 
   const placedPositions: { x: number; y: number; type: string }[] = [];
-
-  // Placement Order: Commercial/Community (Center) -> Hospitals (Spread) -> Schools -> Parks
   const placementOrder = ["community_center", "supermarket", "hospital", "school", "bus_station", "park"];
 
   placementOrder.forEach((amenityType) => {
     let count = amenitiesToPlace[amenityType] || 0;
     
-    while (count > 0) {
-      // Determine required spacing based on amenity type
-      let minDistance = 0;
-      if (amenityType === "hospital") minDistance = 6;
-      else if (amenityType === "school") minDistance = 4;
-      else if (amenityType === "park") minDistance = 3;
+    // BUG FIX: Initialize minDistance OUTSIDE the while loop!
+    let minDistance = 0;
+    if (amenityType === "hospital") minDistance = 6;
+    else if (amenityType === "school") minDistance = 4;
+    else if (amenityType === "park") minDistance = 3;
 
+    while (count > 0) {
       let placed = false;
 
-      // Find a suitable cell
       for (const cell of centerSortedCells) {
-        if (grid[`${cell.x},${cell.y}`].type !== "residential") continue; // Already occupied
+        if (grid[`${cell.x},${cell.y}`].type !== "residential") continue;
 
-        // Check constraint: Is it far enough from same-type amenities?
         const tooClose = placedPositions.some(
           (p) => p.type === amenityType && getDistance(p.x, p.y, cell.x, cell.y) < minDistance
         );
@@ -61,12 +54,11 @@ export function placeAmenities(
         }
       }
 
-      // Fallback if constraints are too strict (reduce distance and try again)
       if (!placed) {
         if (minDistance > 1) {
-          minDistance--; // Relax constraint
+          minDistance--; // Safely relax constraint
         } else {
-          break; // Grid is completely full or impossible to place
+          break; // Grid is completely full, break safely to prevent infinite loop
         }
       }
     }
@@ -75,7 +67,7 @@ export function placeAmenities(
   return grid;
 }
 
-// 2. A* PATHFINDING ALGORITHM (Road Routing)
+// 2. A* PATHFINDING ALGORITHM
 export function generateRoads(
   gridSize: number,
   grid: Record<string, GridCell>
@@ -85,12 +77,10 @@ export function generateRoads(
   
   if (amenities.length < 2) return updatedGrid;
 
-  // Connect amenities to the center, or to each other
   const centerX = Math.floor(gridSize / 2);
   const centerY = Math.floor(gridSize / 2);
 
   amenities.forEach((start) => {
-    // Basic A* Implementation
     const openSet = new Set<string>([`${start.x},${start.y}`]);
     const cameFrom = new Map<string, string>();
     const gScore = new Map<string, number>();
@@ -99,8 +89,12 @@ export function generateRoads(
     const fScore = new Map<string, number>();
     fScore.set(`${start.x},${start.y}`, getDistance(start.x, start.y, centerX, centerY));
 
-    while (openSet.size > 0) {
-      // Find node in openSet with lowest fScore
+    // Hardcap iterations to prevent pathfinding infinite loops on weird topographies
+    let iterations = 0; 
+    const MAX_ITERATIONS = 1000;
+
+    while (openSet.size > 0 && iterations < MAX_ITERATIONS) {
+      iterations++;
       let currentKey = "";
       let lowestF = Infinity;
       for (const key of openSet) {
@@ -113,15 +107,12 @@ export function generateRoads(
 
       const [cx, cy] = currentKey.split(",").map(Number);
 
-      // Reached center or near center
       if (getDistance(cx, cy, centerX, centerY) <= 1) {
-        // Reconstruct path
         let curr = currentKey;
         while (cameFrom.has(curr)) {
           curr = cameFrom.get(curr)!;
           const [px, py] = curr.split(",").map(Number);
           const cell = updatedGrid[`${px},${py}`];
-          // Don't overwrite amenities with roads
           if (cell && cell.type === "residential") {
             updatedGrid[`${px},${py}`] = { ...cell, type: "road" };
           }
@@ -131,16 +122,12 @@ export function generateRoads(
 
       openSet.delete(currentKey);
 
-      // Check neighbors
-      const neighbors = [
-        [cx, cy - 1], [cx, cy + 1], [cx - 1, cy], [cx + 1, cy]
-      ];
+      const neighbors = [[cx, cy - 1], [cx, cy + 1], [cx - 1, cy], [cx + 1, cy]];
 
       for (const [nx, ny] of neighbors) {
         const nKey = `${nx},${ny}`;
         const neighborCell = updatedGrid[nKey];
 
-        // Bounds and obstacle check
         if (!neighborCell || neighborCell.type === "disabled") continue;
 
         const tentativeGScore = (gScore.get(currentKey) || 0) + 1;
@@ -166,22 +153,18 @@ export function calculateEconomics(
 ): Record<string, GridCell> {
   const updatedGrid = { ...grid };
   const amenities = Object.values(updatedGrid).filter((c) => c.type === "amenity");
-  
   let totalAccessibilityScore = 0;
 
-  // First pass: Calculate Accessibility Scores
   Object.values(updatedGrid).forEach((cell) => {
     if (cell.type === "disabled") return;
 
-    let score = 1; // Base score
-    if (cell.type === "road") score += 2; // Roads are slightly more valuable
-    if (cell.type === "amenity") score += 5; // Amenities themselves are high value
+    let score = 1; 
+    if (cell.type === "road") score += 2; 
+    if (cell.type === "amenity") score += 5; 
 
-    // Add value based on proximity to amenities
     amenities.forEach((amenity) => {
       const dist = getDistance(cell.x, cell.y, amenity.x, amenity.y);
       if (dist > 0 && dist < 10) {
-        // Inverse distance weighting
         score += (10 - dist) * 0.5; 
       }
     });
@@ -190,7 +173,6 @@ export function calculateEconomics(
     totalAccessibilityScore += score;
   });
 
-  // Second pass: Distribute Total Land Value proportionally
   if (totalAccessibilityScore > 0) {
     Object.values(updatedGrid).forEach((cell) => {
       if (cell.type === "disabled") {
