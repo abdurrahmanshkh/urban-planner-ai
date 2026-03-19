@@ -11,7 +11,7 @@ export default function Home() {
   });
   
   return (
-    <main className="flex flex-col md:flex-row h-screen w-full bg-background overflow-hidden">
+    <main className="flex min-h-screen w-full flex-col bg-background xl:h-screen xl:flex-row xl:overflow-hidden">
       {/* Left Sidebar Control Panel */}
       <Sidebar />
 
@@ -19,7 +19,7 @@ export default function Home() {
       <GridVisualizer />
 
       {/* Right Analytics Panel (Hidden on smaller screens, stacked on mid screens, side-by-side on xl) */}
-      <div className="hidden xl:block h-full">
+      <div className="hidden xl:block xl:h-full">
         <AnalyticsPanel />
       </div>
     </main>
