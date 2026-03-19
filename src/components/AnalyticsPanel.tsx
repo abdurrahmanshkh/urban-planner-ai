@@ -4,10 +4,10 @@
 import { motion } from "framer-motion";
 import { Activity, IndianRupee, Users } from "lucide-react";
 import { usePlanStore } from "@/store/usePlanStore";
-import { AMENITY_CONFIG, calculateIdealAmenities } from "@/lib/planningMath";
+import { AMENITY_CONFIG, calculateIdealAmenities, getBlockAreaHectares } from "@/lib/planningMath";
 
 export default function AnalyticsPanel() {
-  const { gridData, population, gridSize, amenities } = usePlanStore();
+  const { gridData, population, gridSize, amenities, blockSizeMeters, roadAreaHectares, roadNetwork } = usePlanStore();
 
   const cells = Object.values(gridData);
   const activeCells = cells.filter(c => c.type !== "disabled");
@@ -19,6 +19,7 @@ export default function AnalyticsPanel() {
   
   const totalAccess = activeCells.reduce((sum, cell) => sum + (cell.accessibilityScore || 0), 0);
   const avgAccess = activeCells.length > 0 ? totalAccess / activeCells.length : 0;
+  const modeledAreaHectares = activeCells.length * getBlockAreaHectares(blockSizeMeters);
 
   // Calculate ideals for the Adequacy bars
   const ideals = calculateIdealAmenities(population, gridSize);
@@ -45,6 +46,9 @@ export default function AnalyticsPanel() {
 
         <div className="space-y-4">
           <MetricCard icon={<Users size={18} />} title="Est. Population" value={population.toLocaleString()} />
+          <MetricCard icon={<Activity size={18} />} title="Modeled Land Area" value={`${modeledAreaHectares.toFixed(1)} ha`} />
+          <MetricCard icon={<Activity size={18} />} title="Road Land Use" value={`${roadAreaHectares.toFixed(1)} ha`} />
+          <MetricCard icon={<Activity size={18} />} title="Road Segments" value={Object.keys(roadNetwork).length.toLocaleString()} />
           <MetricCard icon={<IndianRupee size={18} />} title="Avg. Plot Value" value={hasGenerated ? formatINR(avgValue) : "--"} />
           <MetricCard 
             icon={<Activity size={18} />} 
