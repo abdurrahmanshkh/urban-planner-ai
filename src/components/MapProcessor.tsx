@@ -39,11 +39,23 @@ export default function MapProcessor() {
   const loadImage = (file: File) => {
     const url = URL.createObjectURL(file);
     setImageSrc(url);
-    // Reset canvas when new image is loaded
-    if (canvasRef.current) {
-      const ctx = canvasRef.current.getContext("2d");
-      ctx?.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-    }
+
+    // Show instant preview after upload.
+    const img = new Image();
+    img.onload = () => {
+      if (!canvasRef.current) return;
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      const MAX_DIM = 600;
+      const scale = Math.min(MAX_DIM / img.width, MAX_DIM / img.height);
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    };
+    img.src = url;
   };
 
   const processMap = () => {
@@ -52,6 +64,7 @@ export default function MapProcessor() {
 
     const img = new Image();
     img.onload = () => {
+      try {
       const canvas = canvasRef.current!;
       const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
       
@@ -77,6 +90,14 @@ export default function MapProcessor() {
           if (y < minY) minY = y;
           if (y > maxY) maxY = y;
         }
+      }
+
+      // If no boundary is detected, fall back to the full image extents.
+      if (minX === canvas.width && minY === canvas.height && maxX === 0 && maxY === 0) {
+        minX = 0;
+        minY = 0;
+        maxX = canvas.width;
+        maxY = canvas.height;
       }
 
       // Add slight padding to bounding box
@@ -225,9 +246,15 @@ export default function MapProcessor() {
       }
 
       // Save to global state
-      const developableCells = Object.values(newGridData).filter((cell) => cell.type === "residential").length;
-      const developableAreaHectares = developableCells * getBlockAreaHectares(blockSizeMeters);
-      setGridData(resolution, newGridData, developableAreaHectares);
+      setGridData(resolution, newGridData);
+      } catch (error) {
+        console.error("Failed to extract grid from uploaded image", error);
+      } finally {
+        setProcessing(false);
+      }
+    };
+    img.onerror = () => {
+      console.error("Failed to load uploaded image for processing.");
       setProcessing(false);
     };
     img.src = imageSrc;
