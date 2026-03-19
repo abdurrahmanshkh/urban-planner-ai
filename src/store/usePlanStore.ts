@@ -34,6 +34,7 @@ interface PlanState {
   setAmenityCount: (type: string, count: number) => void;
   setGridLocked: (locked: boolean) => void;
   generateCityPlan: () => void;
+  moveAmenity: (fromKey: string, toKey: string) => void;
 }
 
 export const usePlanStore = create<PlanState>((set) => ({
@@ -82,5 +83,29 @@ export const usePlanStore = create<PlanState>((set) => ({
     
     // Commit the processed grid to state
     set({ gridData: newGrid });
+  },
+  moveAmenity: (fromKey, toKey) => {
+    const { gridData, totalLandValue } = get();
+    const fromCell = gridData[fromKey];
+    const toCell = gridData[toKey];
+
+    // Basic validation: Ensure we are moving an amenity to a residential block
+    if (!fromCell || !toCell || fromCell.type !== 'amenity' || toCell.type === 'disabled' || toCell.type === 'road') {
+      return;
+    }
+
+    // Clone the grid to mutate
+    const newGrid = { ...gridData };
+
+    // Move the amenity
+    newGrid[toKey] = { ...toCell, type: 'amenity', amenityType: fromCell.amenityType };
+    
+    // Reset the old cell to residential
+    newGrid[fromKey] = { ...fromCell, type: 'residential', amenityType: undefined };
+
+    // Instantly recalculate the economics (Heatmap & Accessibility)
+    const finalizedGrid = calculateEconomics(newGrid, totalLandValue);
+
+    set({ gridData: finalizedGrid });
   },
 }));

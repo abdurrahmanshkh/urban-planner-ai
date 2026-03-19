@@ -3,8 +3,33 @@
 
 import { motion } from "framer-motion";
 import { Activity, IndianRupee, Users } from "lucide-react";
+import { usePlanStore } from "@/store/usePlanStore";
+import { AMENITY_CONFIG, calculateIdealAmenities } from "@/lib/planningMath";
 
 export default function AnalyticsPanel() {
+  const { gridData, population, gridSize, amenities } = usePlanStore();
+
+  const cells = Object.values(gridData);
+  const activeCells = cells.filter(c => c.type !== "disabled");
+  const hasGenerated = cells.some(c => c.type === "amenity");
+
+  // Calculate Real-Time Metrics
+  const totalValue = activeCells.reduce((sum, cell) => sum + (cell.landValue || 0), 0);
+  const avgValue = activeCells.length > 0 ? totalValue / activeCells.length : 0;
+  
+  const totalAccess = activeCells.reduce((sum, cell) => sum + (cell.accessibilityScore || 0), 0);
+  const avgAccess = activeCells.length > 0 ? totalAccess / activeCells.length : 0;
+
+  // Calculate ideals for the Adequacy bars
+  const ideals = calculateIdealAmenities(population, gridSize);
+
+  // Formatter
+  const formatINR = (val: number) => {
+    if (val > 10000000) return `₹${(val / 10000000).toFixed(2)} Cr`;
+    if (val > 100000) return `₹${(val / 100000).toFixed(2)} L`;
+    return `₹${Math.round(val).toLocaleString()}`;
+  };
+
   return (
     <motion.aside 
       initial={{ x: 50, opacity: 0 }}
@@ -19,20 +44,36 @@ export default function AnalyticsPanel() {
         </h3>
 
         <div className="space-y-4">
-          <MetricCard icon={<Users size={18} />} title="Est. Population" value="--" />
-          <MetricCard icon={<IndianRupee size={18} />} title="Avg. Land Value" value="--" />
-          <MetricCard icon={<Activity size={18} />} title="Accessibility Score" value="-- / 4.0" />
+          <MetricCard icon={<Users size={18} />} title="Est. Population" value={population.toLocaleString()} />
+          <MetricCard icon={<IndianRupee size={18} />} title="Avg. Plot Value" value={hasGenerated ? formatINR(avgValue) : "--"} />
+          <MetricCard 
+            icon={<Activity size={18} />} 
+            title="Avg. Accessibility" 
+            value={hasGenerated ? `${avgAccess.toFixed(2)} / 10.0` : "-- / 10.0"} 
+          />
         </div>
 
-        <div className="mt-8">
-          <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">Amenity Adequacy</h4>
-          <div className="space-y-3">
-            {/* Placeholders for our future math-based adequacy checks */}
-            <AdequacyBar label="Schools" percentage={0} />
-            <AdequacyBar label="Hospitals" percentage={0} />
-            <AdequacyBar label="Parks" percentage={0} />
+        {hasGenerated && (
+          <div className="mt-8">
+            <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">Coverage Adequacy</h4>
+            <div className="space-y-4">
+              {Object.values(AMENITY_CONFIG).map(config => {
+                const current = amenities[config.id] || 0;
+                const ideal = ideals[config.id] || 1;
+                const percentage = Math.min(100, Math.round((current / ideal) * 100));
+                
+                return (
+                  <AdequacyBar 
+                    key={config.id}
+                    label={config.name} 
+                    percentage={percentage} 
+                    color={config.color}
+                  />
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </motion.aside>
   );
@@ -50,15 +91,18 @@ function MetricCard({ icon, title, value }: { icon: React.ReactNode, title: stri
   );
 }
 
-function AdequacyBar({ label, percentage }: { label: string, percentage: number }) {
+function AdequacyBar({ label, percentage, color }: { label: string, percentage: number, color: string }) {
   return (
     <div>
       <div className="flex justify-between text-sm mb-1">
         <span className="text-slate-600 font-medium">{label}</span>
-        <span className="text-slate-400">{percentage}%</span>
+        <span className="text-slate-500">{percentage}%</span>
       </div>
       <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-        <div className="h-full bg-slate-300 transition-all duration-500" style={{ width: `${percentage}%` }}></div>
+        <div 
+          className="h-full transition-all duration-500 ease-out" 
+          style={{ width: `${percentage}%`, backgroundColor: color }}
+        ></div>
       </div>
     </div>
   );

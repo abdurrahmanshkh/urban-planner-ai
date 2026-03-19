@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Maximize2, Download, Map } from "lucide-react";
 import MapProcessor from "./MapProcessor";
 import { usePlanStore } from "@/store/usePlanStore";
+import InteractiveGrid from "./InteractiveGrid";
 import ZoningWizard from "./ZoningWizard";
 
 export default function GridVisualizer() {
@@ -43,16 +44,23 @@ export default function GridVisualizer() {
           </div>
         ) : (
           <>
-            {/* The Visual Grid will go here in Phase 5 */}
-            <div className="flex-1 bg-surface rounded-2xl border border-slate-200 shadow-soft p-6 flex flex-col items-center justify-center">
-              <Map className="mx-auto text-slate-300 mb-4" size={48} />
-              <h3 className="text-xl font-bold text-slate-800 mb-2">Topography Ready</h3>
-              <p className="text-slate-500 max-w-sm text-center">
-                Configure your demographic requirements in the panel on the right. Once locked, the algorithm will place the infrastructure here.
-              </p>
+            {/* The Visual Grid goes here */}
+            <div className="flex-1 bg-surface rounded-2xl border border-slate-200 shadow-soft p-6 flex flex-col">
+               {/* Check if amenities have been placed yet to decide what to show */}
+               {Object.values(usePlanStore.getState().gridData).some(c => c.type === 'amenity') ? (
+                 <InteractiveGrid />
+               ) : (
+                 <div className="flex-1 flex flex-col items-center justify-center text-center">
+                    <Map className="mx-auto text-slate-300 mb-4" size={48} />
+                    <h3 className="text-xl font-bold text-slate-800 mb-2">Topography Ready</h3>
+                    <p className="text-slate-500 max-w-sm mx-auto">
+                      Configure your demographic requirements in the panel on the right. Once locked, the algorithm will place the infrastructure here.
+                    </p>
+                 </div>
+               )}
             </div>
 
-            {/* The new Configuration Wizard */}
+            {/* The Configuration Wizard */}
             <div className="w-[400px] shrink-0">
               <ZoningWizard />
             </div>
