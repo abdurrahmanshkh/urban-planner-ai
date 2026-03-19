@@ -9,13 +9,29 @@ import ZoningWizard from "./ZoningWizard";
 import MapProcessor from "./MapProcessor";
 import InteractiveGrid from "./InteractiveGrid";
 import { usePlanStore } from "@/store/usePlanStore";
+import { AMENITY_CONFIG } from "@/lib/planningMath";
+import type { GridCell } from "@/store/usePlanStore";
+
+const getExportCellAppearance = (cell: GridCell) => {
+  if (cell.type === "disabled") return { backgroundColor: "#f1f5f9", borderColor: "#e2e8f0", color: "#475569" };
+  if (cell.type === "road") return { backgroundColor: "#64748b", borderColor: "#475569", color: "#ffffff" };
+  if (cell.type === "residential") return { backgroundColor: "#fef08a", borderColor: "#fde047", color: "#334155" };
+
+  if (cell.type === "amenity" && cell.amenityType) {
+    const config = AMENITY_CONFIG[cell.amenityType as keyof typeof AMENITY_CONFIG];
+    return { backgroundColor: config?.color || "#cbd5e1", borderColor: "#cbd5e1", color: "#ffffff" };
+  }
+
+  return { backgroundColor: "#ffffff", borderColor: "#e2e8f0", color: "#475569" };
+};
 
 export default function GridVisualizer() {
-  const { gridData, isGenerating, population, totalLandValue } = usePlanStore();
+  const { gridSize, gridData, isGenerating, population, totalLandValue } = usePlanStore();
   const [isExporting, setIsExporting] = useState(false);
 
   const hasGridData = Object.keys(gridData).length > 0;
   const hasGeneratedPlan = Object.values(gridData).some((c) => c.type === "amenity");
+  const sortedCells = Object.values(gridData).sort((a, b) => (a.y - b.y) || (a.x - b.x));
 
   const exportToPDF = async () => {
     if (!hasGeneratedPlan) return;
@@ -26,7 +42,7 @@ export default function GridVisualizer() {
       const html2canvas = (await import("html2canvas")).default;
       const { jsPDF } = await import("jspdf");
 
-      const gridElement = document.getElementById("export-grid");
+      const gridElement = document.getElementById("pdf-export-grid");
       if (!gridElement) throw new Error("Grid element not found");
 
       const canvas = await html2canvas(gridElement, { scale: 2, useCORS: true });
@@ -34,7 +50,6 @@ export default function GridVisualizer() {
 
       const pdf = new jsPDF("p", "mm", "a4");
       const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
       // Header
       pdf.setFontSize(22);
@@ -148,6 +163,62 @@ export default function GridVisualizer() {
           </>
         )}
       </div>
+
+      {hasGeneratedPlan && (
+        <div
+          style={{
+            position: "fixed",
+            left: "-10000px",
+            top: 0,
+            width: "1024px",
+            padding: "24px",
+            backgroundColor: "#ffffff",
+            color: "#0f172a",
+            fontFamily: "Inter, system-ui, sans-serif",
+          }}
+        >
+          <div id="pdf-export-grid" style={{ backgroundColor: "#ffffff" }}>
+            <h2 style={{ margin: "0 0 10px", fontSize: "24px", fontWeight: 700 }}>City Topography</h2>
+            <p style={{ margin: "0 0 18px", fontSize: "14px", color: "#475569" }}>Generated zoning layout snapshot.</p>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: `repeat(${Math.max(1, gridSize)}, minmax(0, 1fr))`,
+                gap: "2px",
+                backgroundColor: "#e2e8f0",
+                padding: "2px",
+                borderRadius: "10px",
+              }}
+            >
+              {sortedCells.map((cell) => {
+                const cellKey = `${cell.x},${cell.y}`;
+                const appearance = getExportCellAppearance(cell);
+                const amenityConfig = cell.amenityType
+                  ? AMENITY_CONFIG[cell.amenityType as keyof typeof AMENITY_CONFIG]
+                  : null;
+
+                return (
+                  <div
+                    key={cellKey}
+                    style={{
+                      ...appearance,
+                      width: "100%",
+                      aspectRatio: "1 / 1",
+                      border: `1px solid ${appearance.borderColor}`,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "20px",
+                    }}
+                  >
+                    {cell.type === "amenity" && amenityConfig ? amenityConfig.icon : ""}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 }
