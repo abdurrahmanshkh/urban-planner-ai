@@ -1,9 +1,10 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Maximize2, Download, CheckCircle2 } from "lucide-react";
+import { Maximize2, Download, Map } from "lucide-react";
 import MapProcessor from "./MapProcessor";
 import { usePlanStore } from "@/store/usePlanStore";
+import ZoningWizard from "./ZoningWizard";
 
 export default function GridVisualizer() {
   // Check if gridData has been populated to switch views
@@ -35,21 +36,27 @@ export default function GridVisualizer() {
       </div>
 
       {/* Main Container */}
-      <div className="flex-1 relative">
+      <div className="flex-1 relative flex gap-6">
         {!hasGridData ? (
-          <MapProcessor />
-        ) : (
-          <div className="flex flex-col h-full bg-surface rounded-2xl border border-slate-200 shadow-soft p-6 items-center justify-center text-center">
-            {/* Phase 5 will replace this placeholder with the interactive React visualizer */}
-            <div className="text-success mb-4">
-              <CheckCircle2 size={48} className="mx-auto" />
-            </div>
-            <h3 className="text-xl font-bold text-slate-800 mb-2">Grid Extracted Successfully!</h3>
-            <p className="text-slate-500 max-w-md mx-auto">
-              The internal state is now holding the extracted, purely active blocks. 
-              We are ready to move to Phase 3 to build the Configuration Wizard.
-            </p>
+          <div className="flex-1">
+            <MapProcessor />
           </div>
+        ) : (
+          <>
+            {/* The Visual Grid will go here in Phase 5 */}
+            <div className="flex-1 bg-surface rounded-2xl border border-slate-200 shadow-soft p-6 flex flex-col items-center justify-center">
+              <Map className="mx-auto text-slate-300 mb-4" size={48} />
+              <h3 className="text-xl font-bold text-slate-800 mb-2">Topography Ready</h3>
+              <p className="text-slate-500 max-w-sm text-center">
+                Configure your demographic requirements in the panel on the right. Once locked, the algorithm will place the infrastructure here.
+              </p>
+            </div>
+
+            {/* The new Configuration Wizard */}
+            <div className="w-[400px] shrink-0">
+              <ZoningWizard />
+            </div>
+          </>
         )}
       </div>
     </motion.div>
