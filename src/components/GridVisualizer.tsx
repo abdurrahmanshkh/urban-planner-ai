@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Maximize2, Download, Map, Loader2 } from "lucide-react";
+import { Maximize2, Download, Map, Loader2, Layers } from "lucide-react";
 
 import ZoningWizard from "./ZoningWizard";
 import MapProcessor from "./MapProcessor";
@@ -75,6 +75,10 @@ export default function GridVisualizer() {
     >
       <div className="flex flex-wrap justify-between items-center gap-3 mb-4 md:mb-6">
         <div>
+          <div className="inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1 text-indigo-700 mb-2">
+            <Layers size={14} />
+            <span className="text-xs font-semibold tracking-wide uppercase">UrbanPlan AI</span>
+          </div>
           <h2 className="text-2xl font-bold text-slate-800">City Topography</h2>
           <p className="text-slate-500">
             {hasGeneratedPlan
