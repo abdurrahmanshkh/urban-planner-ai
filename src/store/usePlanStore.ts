@@ -1,5 +1,6 @@
 // src/store/usePlanStore.ts
 import { create } from 'zustand';
+import { placeAmenities, generateRoads, calculateEconomics } from "@/lib/algorithms";
 
 export type CellType = 'residential' | 'amenity' | 'disabled' | 'road';
 
@@ -32,6 +33,7 @@ interface PlanState {
   setTotalLandValue: (val: number) => void;
   setAmenityCount: (type: string, count: number) => void;
   setGridLocked: (locked: boolean) => void;
+  generateCityPlan: () => void;
 }
 
 export const usePlanStore = create<PlanState>((set) => ({
@@ -66,4 +68,19 @@ export const usePlanStore = create<PlanState>((set) => ({
       amenities: { ...state.amenities, [type]: count },
     })),
   setGridLocked: (locked) => set({ isGridLocked: locked }),
+  generateCityPlan: () => {
+    const { gridSize, gridData, amenities, totalLandValue } = get();
+    
+    // Step 1: Constraint-based Amenity Placement
+    let newGrid = placeAmenities(gridSize, gridData, amenities);
+    
+    // Step 2: A* Road Routing
+    newGrid = generateRoads(gridSize, newGrid);
+    
+    // Step 3: Proportional Economics Calculation
+    newGrid = calculateEconomics(newGrid, totalLandValue);
+    
+    // Commit the processed grid to state
+    set({ gridData: newGrid });
+  },
 }));

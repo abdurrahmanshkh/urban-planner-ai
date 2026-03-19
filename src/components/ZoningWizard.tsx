@@ -9,7 +9,8 @@ import { AMENITY_CONFIG, calculateIdealAmenities } from "@/lib/planningMath";
 export default function ZoningWizard() {
   const { 
     gridSize, population, totalLandValue, amenities, 
-    setPopulation, setTotalLandValue, setAmenityCount, setGridLocked, isGridLocked 
+    setPopulation, setTotalLandValue, setAmenityCount, 
+    setGridLocked, isGridLocked, generateCityPlan
   } = usePlanStore();
 
   const [idealAmenities, setIdealAmenities] = useState<Record<string, number>>({});
@@ -120,14 +121,21 @@ export default function ZoningWizard() {
       {/* Lock Action */}
       <div className="mt-6 pt-4 border-t border-slate-100">
         <button 
-          onClick={() => setGridLocked(!isGridLocked)}
+          onClick={() => {
+            const newLockedState = !isGridLocked;
+            setGridLocked(newLockedState);
+            if (newLockedState) {
+              // Trigger the pure JS algorithm instantly!
+              generateCityPlan();
+            }
+          }}
           className={`w-full py-3 rounded-xl font-bold transition-all shadow-md flex justify-center items-center gap-2 ${
             isGridLocked 
               ? 'bg-slate-200 text-slate-700 hover:bg-slate-300 shadow-none' 
               : 'bg-primary text-white hover:bg-primary-hover shadow-primary/20'
           }`}
         >
-          {isGridLocked ? "Unlock Parameters" : "Lock & Proceed to Generation"}
+          {isGridLocked ? "Unlock Parameters" : "Lock & Generate Plan ⚡"}
         </button>
       </div>
     </div>
