@@ -1,35 +1,53 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Users, IndianRupee, ShieldCheck, AlertTriangle } from "lucide-react";
 import { usePlanStore } from "@/store/usePlanStore";
-import { AMENITY_CONFIG, calculateIdealAmenities } from "@/lib/planningMath";
+import {
+  AMENITY_CONFIG,
+  calculateIdealAmenities,
+  IDEAL_BLOCK_SIZE_METERS,
+  MAX_BLOCK_SIZE_METERS,
+  MIN_BLOCK_SIZE_METERS,
+  TARGET_MAX_PEOPLE_PER_HECTARE,
+} from "@/lib/planningMath";
 
 export default function ZoningWizard() {
   const { 
-    gridSize, population, totalLandValue, amenities, 
-    setPopulation, setTotalLandValue, setAmenityCount, 
-    setGridLocked, isGridLocked, generateCityPlan
+    gridSize,
+    population,
+    totalLandValue,
+    amenities,
+    landAreaHectares,
+    blockSizeMeters,
+    computedDevelopableAreaHectares,
+    setPopulation,
+    setTotalLandValue,
+    setLandAreaHectares,
+    setBlockSizeMeters,
+    setAmenityCount,
+    setGridLocked,
+    isGridLocked,
+    generateCityPlan,
   } = usePlanStore();
 
-  const [idealAmenities, setIdealAmenities] = useState<Record<string, number>>({});
+  const didSeedAmenities = useRef(false);
+
+  const idealAmenities = useMemo(() => calculateIdealAmenities(population, gridSize), [population, gridSize]);
 
   useEffect(() => {
-    const ideals = calculateIdealAmenities(population, gridSize);
-    setIdealAmenities(ideals);
-    
-    if (Object.values(amenities).every(v => v === 0)) {
-      Object.entries(ideals).forEach(([key, val]) => setAmenityCount(key, val));
+    if (!didSeedAmenities.current && Object.values(amenities).every(v => v === 0)) {
+      Object.entries(idealAmenities).forEach(([key, val]) => setAmenityCount(key, val));
+      didSeedAmenities.current = true;
     }
-  }, [population, gridSize]);
+  }, [amenities, idealAmenities, setAmenityCount]);
 
   const formatINR = (value: number) => {
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(value);
   };
 
-  const activeCellsCount = Object.values(usePlanStore.getState().gridData).filter(c => c.type !== 'disabled').length;
-  const usableCells = activeCellsCount > 0 ? activeCellsCount : gridSize * gridSize; 
-  const MAX_POPULATION = usableCells * 1500;
+  const effectiveLandAreaHectares = computedDevelopableAreaHectares > 0 ? computedDevelopableAreaHectares : landAreaHectares;
+  const MAX_POPULATION = Math.round(effectiveLandAreaHectares * TARGET_MAX_PEOPLE_PER_HECTARE);
   const isOverpopulated = population > MAX_POPULATION;
 
   // BUG FIX: Added max-h-full and ensured the parent div is a flex column
@@ -62,9 +80,43 @@ export default function ZoningWizard() {
           />
           {isOverpopulated && (
             <p className="text-xs text-red-500 mt-2 font-medium flex items-center gap-1">
-              <AlertTriangle size={12} /> Exceeds maximum density! Max allowed is {MAX_POPULATION.toLocaleString()}.
+              <AlertTriangle size={12} /> Exceeds density cap of {TARGET_MAX_PEOPLE_PER_HECTARE} people/hectare. Max allowed is {MAX_POPULATION.toLocaleString()}.
             </p>
           )}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">Total Land Area (hectares)</label>
+            <input
+              type="number"
+              min="1"
+              step="1"
+              value={landAreaHectares}
+              disabled={isGridLocked}
+              onChange={(e) => setLandAreaHectares(Math.max(1, Number(e.target.value)))}
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 outline-none transition-all disabled:bg-slate-50 disabled:text-slate-400"
+            />
+            <p className="text-xs text-slate-500 mt-2">Grid count auto-scales from this area after map extraction.</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">Block Size (meters)</label>
+            <input
+              type="number"
+              min={MIN_BLOCK_SIZE_METERS}
+              max={MAX_BLOCK_SIZE_METERS}
+              step="5"
+              value={blockSizeMeters}
+              disabled={isGridLocked}
+              onChange={(e) => {
+                const value = Number(e.target.value);
+                setBlockSizeMeters(Math.max(MIN_BLOCK_SIZE_METERS, Math.min(MAX_BLOCK_SIZE_METERS, value)));
+              }}
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 outline-none transition-all disabled:bg-slate-50 disabled:text-slate-400"
+            />
+            <p className="text-xs text-slate-500 mt-2">Recommended default: {IDEAL_BLOCK_SIZE_METERS}m (walkable urban block range).</p>
+          </div>
         </div>
 
         <div>
