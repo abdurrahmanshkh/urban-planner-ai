@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Users, IndianRupee, Map as MapIcon, ShieldCheck } from "lucide-react";
 import { usePlanStore } from "@/store/usePlanStore";
 import { AMENITY_CONFIG, calculateIdealAmenities } from "@/lib/planningMath";
+import { AlertTriangle } from "lucide-react";
 
 export default function ZoningWizard() {
   const { 
@@ -35,6 +36,12 @@ export default function ZoningWizard() {
     }).format(value);
   };
 
+  const activeCellsCount = Object.values(usePlanStore.getState().gridData).filter(c => c.type !== 'disabled').length;
+  // Fallback to total grid if map hasn't been parsed yet
+  const usableCells = activeCellsCount > 0 ? activeCellsCount : gridSize * gridSize; 
+  const MAX_POPULATION = usableCells * 1500; // Max 1,500 people per block
+  const isOverpopulated = population > MAX_POPULATION;
+
   return (
     <div className="flex flex-col h-full bg-surface rounded-2xl border border-slate-200 shadow-soft overflow-hidden p-6">
       <div className="mb-6">
@@ -58,8 +65,15 @@ export default function ZoningWizard() {
             value={population}
             disabled={isGridLocked}
             onChange={(e) => setPopulation(Number(e.target.value))}
-            className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary-light outline-none transition-all disabled:bg-slate-50 disabled:text-slate-400"
+            className={`w-full px-4 py-3 rounded-xl border outline-none transition-all disabled:bg-slate-50 disabled:text-slate-400 ${
+              isOverpopulated ? 'border-red-500 focus:ring-red-200' : 'border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary-light'
+            }`}
           />
+          {isOverpopulated && (
+            <p className="text-xs text-red-500 mt-2 font-medium flex items-center gap-1">
+              <AlertTriangle size={12} /> Exceeds maximum density! Max allowed for this grid is {MAX_POPULATION.toLocaleString()}.
+            </p>
+          )}
         </div>
 
         {/* Input: Total Land Value */}
@@ -119,25 +133,26 @@ export default function ZoningWizard() {
       </div>
 
       {/* Lock Action */}
-      <div className="mt-6 pt-4 border-t border-slate-100">
-        <button 
-          onClick={() => {
-            const newLockedState = !isGridLocked;
-            setGridLocked(newLockedState);
-            if (newLockedState) {
-              // Trigger the pure JS algorithm instantly!
-              generateCityPlan();
+      <button 
+          disabled={isOverpopulated}
+          onClick={async () => {
+            if (isGridLocked) {
+              setGridLocked(false);
+            } else {
+              setGridLocked(true);
+              await generateCityPlan();
             }
           }}
-          className={`w-full py-3 rounded-xl font-bold transition-all shadow-md flex justify-center items-center gap-2 ${
-            isGridLocked 
-              ? 'bg-slate-200 text-slate-700 hover:bg-slate-300 shadow-none' 
-              : 'bg-primary text-white hover:bg-primary-hover shadow-primary/20'
+          className={`w-full py-3 rounded-xl font-bold transition-all flex justify-center items-center gap-2 ${
+            isOverpopulated 
+              ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+              : isGridLocked 
+                ? 'bg-slate-200 text-slate-700 hover:bg-slate-300' 
+                : 'bg-primary text-white hover:bg-primary-hover shadow-md shadow-primary/20'
           }`}
         >
           {isGridLocked ? "Unlock Parameters" : "Lock & Generate Plan ⚡"}
         </button>
-      </div>
     </div>
   );
 }

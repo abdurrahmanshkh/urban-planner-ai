@@ -33,25 +33,21 @@ interface PlanState {
   setTotalLandValue: (val: number) => void;
   setAmenityCount: (type: string, count: number) => void;
   setGridLocked: (locked: boolean) => void;
-  generateCityPlan: () => void;
+  generateCityPlan: () => Promise<void>; // <-- UPDATED to Promise
   moveAmenity: (fromKey: string, toKey: string) => void;
 }
 
-export const usePlanStore = create<PlanState>((set) => ({
+export const usePlanStore = create<PlanState>((set, get) => ({
   gridSize: 15,
   gridData: {},
   isGridLocked: false,
+  isGenerating: false, // <-- NEW
   
   population: 50000,
-  totalLandValue: 500000000, // ₹50 Crore default
+  totalLandValue: 500000000,
   
   amenities: {
-    school: 0,
-    hospital: 0,
-    park: 0,
-    supermarket: 0,
-    bus_station: 0,
-    community_center: 0,
+    school: 0, hospital: 0, park: 0, supermarket: 0, bus_station: 0, community_center: 0,
   },
 
   setGridData: (size, data) => set({ gridSize: size, gridData: data }),
@@ -69,7 +65,12 @@ export const usePlanStore = create<PlanState>((set) => ({
       amenities: { ...state.amenities, [type]: count },
     })),
   setGridLocked: (locked) => set({ isGridLocked: locked }),
-  generateCityPlan: () => {
+  generateCityPlan: async () => {
+    set({ isGenerating: true }); // Start loading animation
+    
+    // Simulate a complex calculation delay for UX purposes (1.5 seconds)
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+
     const { gridSize, gridData, amenities, totalLandValue } = get();
     
     // Step 1: Constraint-based Amenity Placement
@@ -80,9 +81,9 @@ export const usePlanStore = create<PlanState>((set) => ({
     
     // Step 3: Proportional Economics Calculation
     newGrid = calculateEconomics(newGrid, totalLandValue);
-    
+
     // Commit the processed grid to state
-    set({ gridData: newGrid });
+    set({ gridData: newGrid, isGenerating: false }); // End loading animation
   },
   moveAmenity: (fromKey, toKey) => {
     const { gridData, totalLandValue } = get();
