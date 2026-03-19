@@ -3,15 +3,17 @@
 
 import { useState } from "react";
 import { usePlanStore, GridCell } from "@/store/usePlanStore";
-import { AMENITY_CONFIG } from "@/lib/planningMath";
+import { AMENITY_CONFIG, getBlockAreaHectares } from "@/lib/planningMath";
 import { Map, TrendingUp } from "lucide-react";
 
 export default function InteractiveGrid() {
-  const { gridSize, gridData, moveAmenity } = usePlanStore();
+  const { gridSize, gridData, moveAmenity, blockSizeMeters } = usePlanStore();
   const [viewMode, setViewMode] = useState<"zoning" | "heatmap">("zoning");
 
   const cells = Object.values(gridData);
   if (cells.length === 0) return null;
+  const activeCellCount = cells.filter((c) => c.type !== "disabled").length;
+  const modeledAreaHectares = activeCellCount * getBlockAreaHectares(blockSizeMeters);
 
   // Find max land value for heatmap scaling
   const maxLandValue = Math.max(...cells.map(c => c.landValue || 0));
@@ -63,6 +65,9 @@ export default function InteractiveGrid() {
       {/* View Toggle Controls */}
       <div className="flex justify-between items-center mb-4 bg-slate-50 p-2 rounded-xl border border-slate-200">
         <span className="text-sm font-bold text-slate-600 px-2 uppercase tracking-wide">Visualization</span>
+        <span className="text-xs text-slate-500">
+          {gridSize}×{gridSize} | ~{modeledAreaHectares.toFixed(1)} ha | {blockSizeMeters}m blocks
+        </span>
         <div className="flex gap-2">
           <button 
             onClick={() => setViewMode("zoning")}

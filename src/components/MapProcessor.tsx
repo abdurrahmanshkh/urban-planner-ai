@@ -3,15 +3,19 @@
 import { useState, useRef, DragEvent, ChangeEvent } from "react";
 import { UploadCloud, CheckCircle2, Settings2 } from "lucide-react";
 import { usePlanStore, GridCell } from "@/store/usePlanStore";
+import { estimateGridResolution, getBlockAreaHectares } from "@/lib/planningMath";
 
 export default function MapProcessor() {
   const [isDragging, setIsDragging] = useState(false);
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
-  const [resolution, setResolution] = useState(15); // Grid size (e.g., 15x15)
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
-  const setGridData = usePlanStore((state) => state.setGridData);
+  const { setGridData, landAreaHectares, blockSizeMeters } = usePlanStore((state) => ({
+    setGridData: state.setGridData,
+    landAreaHectares: state.landAreaHectares,
+    blockSizeMeters: state.blockSizeMeters,
+  }));
 
   const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -85,6 +89,55 @@ export default function MapProcessor() {
 
       const boxW = maxX - minX;
       const boxH = maxY - minY;
+
+      // Estimate the developable footprint ratio from the uploaded map.
+      const boundaryPixels = new Uint8Array(boxW * boxH);
+      for (let y = 0; y < boxH; y++) {
+        for (let x = 0; x < boxW; x++) {
+          const px = minX + x;
+          const py = minY + y;
+          const idx = (py * canvas.width + px) * 4;
+          const lum = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+          boundaryPixels[y * boxW + x] = lum < 128 ? 1 : 0;
+        }
+      }
+
+      const outsidePixels = new Uint8Array(boxW * boxH);
+      const pixelQueue: [number, number][] = [];
+      const pushPixel = (x: number, y: number) => {
+        const i = y * boxW + x;
+        if (outsidePixels[i] || boundaryPixels[i]) return;
+        outsidePixels[i] = 1;
+        pixelQueue.push([x, y]);
+      };
+
+      for (let x = 0; x < boxW; x++) {
+        pushPixel(x, 0);
+        pushPixel(x, boxH - 1);
+      }
+      for (let y = 0; y < boxH; y++) {
+        pushPixel(0, y);
+        pushPixel(boxW - 1, y);
+      }
+
+      while (pixelQueue.length) {
+        const [px, py] = pixelQueue.shift()!;
+        const neighbors = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+        for (const [dx, dy] of neighbors) {
+          const nx = px + dx;
+          const ny = py + dy;
+          if (nx < 0 || nx >= boxW || ny < 0 || ny >= boxH) continue;
+          pushPixel(nx, ny);
+        }
+      }
+
+      let insidePixels = 0;
+      for (let i = 0; i < boundaryPixels.length; i++) {
+        if (!boundaryPixels[i] && !outsidePixels[i]) insidePixels++;
+      }
+
+      const developableFillRatio = insidePixels / Math.max(1, boxW * boxH);
+      const resolution = estimateGridResolution(landAreaHectares, blockSizeMeters, developableFillRatio);
       const cellW = boxW / resolution;
       const cellH = boxH / resolution;
 
@@ -174,7 +227,9 @@ export default function MapProcessor() {
       }
 
       // Save to global state
-      setGridData(resolution, newGridData);
+      const developableCells = Object.values(newGridData).filter((cell) => cell.type === "residential").length;
+      const developableAreaHectares = developableCells * getBlockAreaHectares(blockSizeMeters);
+      setGridData(resolution, newGridData, developableAreaHectares);
       setProcessing(false);
     };
     img.src = imageSrc;
@@ -209,15 +264,9 @@ export default function MapProcessor() {
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
                 <Settings2 size={16} className="text-slate-400" />
-                Grid Resolution: {resolution}x{resolution}
+                Auto Grid Resolution (area-aware)
               </div>
-              <input 
-                type="range" 
-                min="10" max="30" 
-                value={resolution} 
-                onChange={(e) => setResolution(parseInt(e.target.value))}
-                className="w-32 accent-primary"
-              />
+              <p className="text-xs text-slate-500">Using {landAreaHectares.toLocaleString()} ha and {blockSizeMeters}m block size</p>
             </div>
             <div className="flex gap-2">
               <button 
