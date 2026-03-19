@@ -98,11 +98,15 @@ export function generateRoads(
       let currentKey = "";
       let lowestF = Infinity;
       for (const key of openSet) {
-        const score = fScore.get(key) || Infinity;
+        const score = fScore.get(key) ?? Infinity;
         if (score < lowestF) {
           lowestF = score;
           currentKey = key;
         }
+      }
+
+      if (!currentKey) {
+        break;
       }
 
       const [cx, cy] = currentKey.split(",").map(Number);
@@ -131,7 +135,7 @@ export function generateRoads(
         if (!neighborCell || neighborCell.type === "disabled") continue;
 
         const tentativeGScore = (gScore.get(currentKey) || 0) + 1;
-        const currentNeighborGScore = gScore.get(nKey) || Infinity;
+        const currentNeighborGScore = gScore.get(nKey) ?? Infinity;
 
         if (tentativeGScore < currentNeighborGScore) {
           cameFrom.set(nKey, currentKey);
