@@ -1,5 +1,6 @@
 import { GridCell } from "@/store/usePlanStore";
 import { AMENITY_CONFIG } from "@/lib/planningMath";
+import { getServiceRadiusInCells } from "@/lib/planningMath";
 
 // Helper: Manhattan Distance
 const getDistance = (x1: number, y1: number, x2: number, y2: number) => {
@@ -208,7 +209,8 @@ export function generateRoads(
 // 3. PROPORTIONAL ECONOMICS MODEL
 export function calculateEconomics(
   grid: Record<string, GridCell>,
-  totalLandValue: number
+  totalLandValue: number,
+  blockSizeMeters: number
 ): Record<string, GridCell> {
   const updatedGrid = { ...grid };
   const cells = Object.values(updatedGrid);
@@ -222,13 +224,13 @@ export function calculateEconomics(
     }
   });
 
-  const serviceRadius: Record<string, number> = {
-    hospital: 9,
-    school: 8,
-    park: 6,
-    supermarket: 6,
-    bus_station: 8,
-    community_center: 7,
+  const serviceRadiusMeters: Record<string, number> = {
+    hospital: 1800,
+    school: 1200,
+    park: 800,
+    supermarket: 700,
+    bus_station: 1200,
+    community_center: 1000,
   };
 
   const serviceWeight: Record<string, number> = {
@@ -251,7 +253,7 @@ export function calculateEconomics(
       if (amenityCells.length === 0) return;
 
       const nearest = Math.min(...amenityCells.map((a) => getDistance(cell.x, cell.y, a.x, a.y)));
-      const radius = serviceRadius[amenityType] ?? 6;
+      const radius = getServiceRadiusInCells(serviceRadiusMeters[amenityType] ?? 700, blockSizeMeters);
       const weight = serviceWeight[amenityType] ?? 1;
       const contribution = Math.max(0, 1 - nearest / radius) * weight;
       accessibility += contribution;
