@@ -1,10 +1,14 @@
-// src/components/GridVisualizer.tsx
 "use client";
 
 import { motion } from "framer-motion";
-import { Maximize2, Download, Map } from "lucide-react";
+import { Maximize2, Download, CheckCircle2 } from "lucide-react";
+import MapProcessor from "./MapProcessor";
+import { usePlanStore } from "@/store/usePlanStore";
 
 export default function GridVisualizer() {
+  // Check if gridData has been populated to switch views
+  const hasGridData = usePlanStore((state) => Object.keys(state.gridData).length > 0);
+
   return (
     <motion.div 
       initial={{ y: 20, opacity: 0 }}
@@ -14,8 +18,10 @@ export default function GridVisualizer() {
     >
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">Interactive City Grid</h2>
-          <p className="text-slate-500">Upload an outline or define parameters to generate zoning.</p>
+          <h2 className="text-2xl font-bold text-slate-800">City Topography</h2>
+          <p className="text-slate-500">
+            {hasGridData ? "Grid successfully extracted. Ready for zoning." : "Upload an outline map to extract a usable grid."}
+          </p>
         </div>
         <div className="flex gap-3">
           <button className="p-2 bg-surface border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors shadow-sm">
@@ -28,16 +34,23 @@ export default function GridVisualizer() {
         </div>
       </div>
 
-      {/* Main Visualizer Container */}
-      <div className="flex-1 bg-surface rounded-2xl border border-slate-200 shadow-soft overflow-hidden flex items-center justify-center relative">
-        <div className="text-center">
-          <Map className="mx-auto text-slate-300 mb-4" size={48} />
-          <p className="text-slate-400 font-medium">Grid workspace is empty.</p>
-          <p className="text-sm text-slate-400 mt-1">Proceed to Phase 2 to implement the map processor.</p>
-        </div>
-        
-        {/* Placeholder for the future HTML5 Canvas Grid */}
-        <canvas id="city-canvas" className="absolute inset-0 w-full h-full opacity-0 pointer-events-none"></canvas>
+      {/* Main Container */}
+      <div className="flex-1 relative">
+        {!hasGridData ? (
+          <MapProcessor />
+        ) : (
+          <div className="flex flex-col h-full bg-surface rounded-2xl border border-slate-200 shadow-soft p-6 items-center justify-center text-center">
+            {/* Phase 5 will replace this placeholder with the interactive React visualizer */}
+            <div className="text-success mb-4">
+              <CheckCircle2 size={48} className="mx-auto" />
+            </div>
+            <h3 className="text-xl font-bold text-slate-800 mb-2">Grid Extracted Successfully!</h3>
+            <p className="text-slate-500 max-w-md mx-auto">
+              The internal state is now holding the extracted, purely active blocks. 
+              We are ready to move to Phase 3 to build the Configuration Wizard.
+            </p>
+          </div>
+        )}
       </div>
     </motion.div>
   );
