@@ -18,6 +18,7 @@ interface PlanState {
   gridSize: number;
   gridData: Record<string, GridCell>;
   isGridLocked: boolean;
+  isGenerating: boolean;
   
   // Demographics & Economics
   population: number;
@@ -67,23 +68,29 @@ export const usePlanStore = create<PlanState>((set, get) => ({
   setGridLocked: (locked) => set({ isGridLocked: locked }),
   generateCityPlan: async () => {
     set({ isGenerating: true }); // Start loading animation
-    
-    // Simulate a complex calculation delay for UX purposes (1.5 seconds)
-    await new Promise((resolve) => setTimeout(resolve, 1500));
 
-    const { gridSize, gridData, amenities, totalLandValue } = get();
-    
-    // Step 1: Constraint-based Amenity Placement
-    let newGrid = placeAmenities(gridSize, gridData, amenities);
-    
-    // Step 2: A* Road Routing
-    newGrid = generateRoads(gridSize, newGrid);
-    
-    // Step 3: Proportional Economics Calculation
-    newGrid = calculateEconomics(newGrid, totalLandValue);
+    try {
+      // Simulate a complex calculation delay for UX purposes (1.5 seconds)
+      await new Promise((resolve) => setTimeout(resolve, 1500));
 
-    // Commit the processed grid to state
-    set({ gridData: newGrid, isGenerating: false }); // End loading animation
+      const { gridSize, gridData, amenities, totalLandValue } = get();
+
+      // Step 1: Constraint-based Amenity Placement
+      let newGrid = placeAmenities(gridSize, gridData, amenities);
+
+      // Step 2: A* Road Routing
+      newGrid = generateRoads(gridSize, newGrid);
+
+      // Step 3: Proportional Economics Calculation
+      newGrid = calculateEconomics(newGrid, totalLandValue);
+
+      // Commit the processed grid to state
+      set({ gridData: newGrid });
+    } catch (error) {
+      console.error("Failed to generate city plan", error);
+    } finally {
+      set({ isGenerating: false }); // End loading animation, even on failure
+    }
   },
   moveAmenity: (fromKey, toKey) => {
     const { gridData, totalLandValue } = get();
