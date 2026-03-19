@@ -11,11 +11,9 @@ export default function MapProcessor() {
   const [processing, setProcessing] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
-  const { setGridData, landAreaHectares, blockSizeMeters } = usePlanStore((state) => ({
-    setGridData: state.setGridData,
-    landAreaHectares: state.landAreaHectares,
-    blockSizeMeters: state.blockSizeMeters,
-  }));
+  const setGridData = usePlanStore((state) => state.setGridData);
+  const landAreaHectares = usePlanStore((state) => state.landAreaHectares);
+  const blockSizeMeters = usePlanStore((state) => state.blockSizeMeters);
 
   const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
