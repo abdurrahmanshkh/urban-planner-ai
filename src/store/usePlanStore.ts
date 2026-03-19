@@ -1,6 +1,12 @@
 // src/store/usePlanStore.ts
 import { create } from 'zustand';
-import { placeAmenities, generateRoads, calculateEconomics } from "@/lib/algorithms";
+import {
+  placeAmenities,
+  calculateEconomics,
+  generateRoadNetwork,
+  calculateRoadAreaHectares,
+  RoadSegment,
+} from "@/lib/algorithms";
 import { IDEAL_BLOCK_SIZE_METERS } from "@/lib/planningMath";
 
 export type CellType = 'residential' | 'amenity' | 'disabled' | 'road';
@@ -18,6 +24,8 @@ interface PlanState {
   // Grid State
   gridSize: number;
   gridData: Record<string, GridCell>;
+  roadNetwork: Record<string, RoadSegment>;
+  roadAreaHectares: number;
   isGridLocked: boolean;
   isGenerating: boolean;
   
@@ -47,6 +55,8 @@ interface PlanState {
 export const usePlanStore = create<PlanState>((set, get) => ({
   gridSize: 15,
   gridData: {},
+  roadNetwork: {},
+  roadAreaHectares: 0,
   isGridLocked: false,
   isGenerating: false, // <-- NEW
   
@@ -60,7 +70,20 @@ export const usePlanStore = create<PlanState>((set, get) => ({
     school: 0, hospital: 0, park: 0, supermarket: 0, bus_station: 0, community_center: 0,
   },
 
-  setGridData: (size, data, developableAreaHectares) => set({ gridSize: size, gridData: data, computedDevelopableAreaHectares: developableAreaHectares ?? 0 }),
+  setGridData: (size, data, developableAreaHectares) => {
+    const { blockSizeMeters, landAreaHectares } = get();
+    const roadNetwork = generateRoadNetwork(data);
+    const roadAreaHectares = calculateRoadAreaHectares(roadNetwork, blockSizeMeters);
+    const inferredDevelopableArea = Math.max(0, landAreaHectares - roadAreaHectares);
+
+    set({
+      gridSize: size,
+      gridData: data,
+      roadNetwork,
+      roadAreaHectares,
+      computedDevelopableAreaHectares: Math.max(0, developableAreaHectares ?? inferredDevelopableArea),
+    });
+  },
   updateCell: (cellKey, updates) =>
     set((state) => ({
       gridData: {
@@ -84,19 +107,25 @@ export const usePlanStore = create<PlanState>((set, get) => ({
       // Simulate a complex calculation delay for UX purposes (1.5 seconds)
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      const { gridSize, gridData, amenities, totalLandValue, blockSizeMeters } = get();
+      const { gridSize, gridData, amenities, totalLandValue, blockSizeMeters, landAreaHectares } = get();
 
       // Step 1: Constraint-based Amenity Placement
       let newGrid = placeAmenities(gridSize, gridData, amenities);
 
-      // Step 2: A* Road Routing
-      newGrid = generateRoads(gridSize, newGrid);
+      // Step 2: Dynamic road network generation between all active blocks
+      const roadNetwork = generateRoadNetwork(newGrid);
+      const roadAreaHectares = calculateRoadAreaHectares(roadNetwork, blockSizeMeters);
 
       // Step 3: Proportional Economics Calculation
-      newGrid = calculateEconomics(newGrid, totalLandValue, blockSizeMeters);
+      newGrid = calculateEconomics(newGrid, totalLandValue, blockSizeMeters, roadNetwork);
 
       // Commit the processed grid to state
-      set({ gridData: newGrid });
+      set({
+        gridData: newGrid,
+        roadNetwork,
+        roadAreaHectares,
+        computedDevelopableAreaHectares: Math.max(0, landAreaHectares - roadAreaHectares),
+      });
     } catch (error) {
       console.error("Failed to generate city plan", error);
     } finally {
@@ -104,7 +133,7 @@ export const usePlanStore = create<PlanState>((set, get) => ({
     }
   },
   moveAmenity: (fromKey, toKey) => {
-    const { gridData, totalLandValue, blockSizeMeters } = get();
+    const { gridData, totalLandValue, blockSizeMeters, landAreaHectares } = get();
     const fromCell = gridData[fromKey];
     const toCell = gridData[toKey];
 
@@ -123,8 +152,15 @@ export const usePlanStore = create<PlanState>((set, get) => ({
     newGrid[fromKey] = { ...fromCell, type: 'residential', amenityType: undefined };
 
     // Instantly recalculate the economics (Heatmap & Accessibility)
-    const finalizedGrid = calculateEconomics(newGrid, totalLandValue, blockSizeMeters);
+    const roadNetwork = generateRoadNetwork(newGrid);
+    const roadAreaHectares = calculateRoadAreaHectares(roadNetwork, blockSizeMeters);
+    const finalizedGrid = calculateEconomics(newGrid, totalLandValue, blockSizeMeters, roadNetwork);
 
-    set({ gridData: finalizedGrid });
+    set({
+      gridData: finalizedGrid,
+      roadNetwork,
+      roadAreaHectares,
+      computedDevelopableAreaHectares: Math.max(0, landAreaHectares - roadAreaHectares),
+    });
   },
 }));

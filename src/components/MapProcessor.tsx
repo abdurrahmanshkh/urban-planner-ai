@@ -3,7 +3,7 @@
 import { useState, useRef, DragEvent, ChangeEvent } from "react";
 import { UploadCloud, CheckCircle2, Settings2 } from "lucide-react";
 import { usePlanStore, GridCell } from "@/store/usePlanStore";
-import { estimateGridResolution, getBlockAreaHectares } from "@/lib/planningMath";
+import { estimateGridResolution } from "@/lib/planningMath";
 
 export default function MapProcessor() {
   const [isDragging, setIsDragging] = useState(false);
