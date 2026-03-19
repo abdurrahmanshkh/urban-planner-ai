@@ -225,7 +225,9 @@ export default function MapProcessor() {
       }
 
       // Save to global state
-      setGridData(resolution, newGridData);
+      const developableCells = Object.values(newGridData).filter((cell) => cell.type === "residential").length;
+      const developableAreaHectares = developableCells * getBlockAreaHectares(blockSizeMeters);
+      setGridData(resolution, newGridData, developableAreaHectares);
       setProcessing(false);
     };
     img.src = imageSrc;
