@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Maximize2, Download, Map, Loader2 } from "lucide-react";
+import { Maximize2, Download, Map, Loader2, Layers } from "lucide-react";
 
 import ZoningWizard from "./ZoningWizard";
 import MapProcessor from "./MapProcessor";
@@ -71,10 +71,14 @@ export default function GridVisualizer() {
     <motion.div
       initial={{ y: 20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      className="flex-1 h-full p-6 flex flex-col relative"
+      className="flex-1 min-h-0 p-4 md:p-6 flex flex-col relative overflow-y-auto"
     >
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-wrap justify-between items-center gap-3 mb-4 md:mb-6">
         <div>
+          <div className="inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1 text-indigo-700 mb-2">
+            <Layers size={14} />
+            <span className="text-xs font-semibold tracking-wide uppercase">UrbanPlan AI</span>
+          </div>
           <h2 className="text-2xl font-bold text-slate-800">City Topography</h2>
           <p className="text-slate-500">
             {hasGeneratedPlan
@@ -97,14 +101,14 @@ export default function GridVisualizer() {
         </div>
       </div>
 
-      <div className="flex-1 relative flex gap-6 min-h-0">
+      <div className="flex-1 relative flex flex-col 2xl:flex-row gap-6 min-h-0">
         {!hasGridData ? (
-          <div className="flex-1">
+          <div className="flex-1 min-h-[460px]">
             <MapProcessor />
           </div>
         ) : (
           <>
-            <div className="flex-1 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col relative overflow-hidden">
+            <div className="flex-1 min-h-[460px] bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-6 flex flex-col relative overflow-hidden">
               <AnimatePresence>
                 {isGenerating && (
                   <motion.div
@@ -138,7 +142,7 @@ export default function GridVisualizer() {
               )}
             </div>
 
-            <div className="w-[400px] shrink-0">
+            <div className="w-full 2xl:w-[400px] 2xl:shrink-0 max-h-[72vh] 2xl:max-h-none">
               <ZoningWizard />
             </div>
           </>
