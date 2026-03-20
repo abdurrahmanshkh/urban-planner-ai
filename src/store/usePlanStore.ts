@@ -111,7 +111,7 @@ export const usePlanStore = create<PlanState>((set, get) => ({
       const { gridSize, gridData, amenities, totalLandValue, blockSizeMeters, landAreaHectares, population } = get();
 
       // Step 1: Constraint-based Amenity Placement
-      let newGrid = placeAmenities(gridSize, gridData, amenities);
+      let newGrid = placeAmenities(gridSize, gridData, amenities, blockSizeMeters);
 
       // Step 2: Dynamic road network generation between all active blocks
       const roadNetwork = generateRoadNetwork(newGrid, population);
@@ -139,7 +139,12 @@ export const usePlanStore = create<PlanState>((set, get) => ({
     const toCell = gridData[toKey];
 
     // Basic validation: Ensure we are moving an amenity to a residential block
-    if (!fromCell || !toCell || fromCell.type !== 'amenity' || toCell.type === 'disabled' || toCell.type === 'road') {
+    if (
+      !fromCell ||
+      !toCell ||
+      fromCell.type !== 'amenity' ||
+      toCell.type !== 'residential'
+    ) {
       return;
     }
 
@@ -170,7 +175,7 @@ export const usePlanStore = create<PlanState>((set, get) => ({
     if (!target) return;
     if (target.type !== "residential" && target.type !== "disabled") return;
 
-    const updatedType = target.type === "disabled" ? "residential" : "disabled";
+    const updatedType: GridCell["type"] = target.type === "disabled" ? "residential" : "disabled";
     const newGrid = {
       ...gridData,
       [cellKey]: {

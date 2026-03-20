@@ -40,7 +40,8 @@ export default function GridVisualizer() {
     try {
       // Dynamically import heavy libraries to prevent Next.js SSR build errors
       const html2canvas = (await import("html2canvas")).default;
-      const { jsPDF } = await import("jspdf");
+      const jsPDFModule = await import("jspdf");
+      const jsPDF = jsPDFModule.jsPDF || jsPDFModule.default;
 
       const gridElement = document.getElementById("pdf-export-grid");
       if (!gridElement) throw new Error("Grid element not found");
