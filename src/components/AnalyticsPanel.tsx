@@ -4,10 +4,10 @@
 import { motion } from "framer-motion";
 import { Activity, IndianRupee, Users } from "lucide-react";
 import { usePlanStore } from "@/store/usePlanStore";
-import { AMENITY_CONFIG, calculateIdealAmenities } from "@/lib/planningMath";
+import { AMENITY_CONFIG, calculateIdealAmenities, getBlockAreaHectares } from "@/lib/planningMath";
 
 export default function AnalyticsPanel() {
-  const { gridData, population, gridSize, amenities } = usePlanStore();
+  const { gridData, population, gridSize, amenities, blockSizeMeters, roadAreaHectares, roadNetwork } = usePlanStore();
 
   const cells = Object.values(gridData);
   const activeCells = cells.filter(c => c.type !== "disabled");
@@ -19,6 +19,47 @@ export default function AnalyticsPanel() {
   
   const totalAccess = activeCells.reduce((sum, cell) => sum + (cell.accessibilityScore || 0), 0);
   const avgAccess = activeCells.length > 0 ? totalAccess / activeCells.length : 0;
+  const modeledAreaHectares = activeCells.length * getBlockAreaHectares(blockSizeMeters);
+  const roads = Object.values(roadNetwork);
+  const roadMix = roads.reduce<Record<string, number>>((acc, road) => {
+    const key = `${road.roadClass}|${road.laneCount}|${road.widthMeters}`;
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+  const topRoadProfiles = Object.entries(roadMix)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6);
+
+  const roadRows = Object.values(
+    roads.reduce<Record<string, { roadKey: string; className: string; lanes: number; width: number; segments: number; minX: number; maxX: number; minY: number; maxY: number }>>((acc, road) => {
+      const [fromX, fromY] = road.fromKey.split(",").map(Number);
+      const [toX, toY] = road.toKey.split(",").map(Number);
+      const key = road.lineKey;
+      const current = acc[key];
+
+      if (!current) {
+        acc[key] = {
+          roadKey: key,
+          className: road.roadClass,
+          lanes: road.laneCount,
+          width: road.widthMeters,
+          segments: 1,
+          minX: Math.min(fromX, toX),
+          maxX: Math.max(fromX, toX),
+          minY: Math.min(fromY, toY),
+          maxY: Math.max(fromY, toY),
+        };
+      } else {
+        current.segments += 1;
+        current.minX = Math.min(current.minX, fromX, toX);
+        current.maxX = Math.max(current.maxX, fromX, toX);
+        current.minY = Math.min(current.minY, fromY, toY);
+        current.maxY = Math.max(current.maxY, fromY, toY);
+      }
+
+      return acc;
+    }, {})
+  ).sort((a, b) => a.roadKey.localeCompare(b.roadKey, undefined, { numeric: true }));
 
   // Calculate ideals for the Adequacy bars
   const ideals = calculateIdealAmenities(population, gridSize);
@@ -45,6 +86,9 @@ export default function AnalyticsPanel() {
 
         <div className="space-y-4">
           <MetricCard icon={<Users size={18} />} title="Est. Population" value={population.toLocaleString()} />
+          <MetricCard icon={<Activity size={18} />} title="Modeled Land Area" value={`${modeledAreaHectares.toFixed(1)} ha`} />
+          <MetricCard icon={<Activity size={18} />} title="Road Land Use" value={`${roadAreaHectares.toFixed(1)} ha`} />
+          <MetricCard icon={<Activity size={18} />} title="Road Segments" value={Object.keys(roadNetwork).length.toLocaleString()} />
           <MetricCard icon={<IndianRupee size={18} />} title="Avg. Plot Value" value={hasGenerated ? formatINR(avgValue) : "--"} />
           <MetricCard 
             icon={<Activity size={18} />} 
@@ -55,6 +99,19 @@ export default function AnalyticsPanel() {
 
         {hasGenerated && (
           <div className="mt-8">
+            <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">Road Recommendation Mix</h4>
+            <div className="space-y-2 mb-6">
+              {topRoadProfiles.length > 0 ? topRoadProfiles.map(([profile, count]) => {
+                const [roadClass, lanes, width] = profile.split("|");
+                return (
+                  <div key={profile} className="flex items-center justify-between text-sm bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
+                    <span className="font-medium text-slate-700">{roadClass} • {lanes} lanes • {width}m</span>
+                    <span className="text-slate-500">{count} segments</span>
+                  </div>
+                );
+              }) : <p className="text-sm text-slate-500">No active roads yet.</p>}
+            </div>
+
             <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">Coverage Adequacy</h4>
             <div className="space-y-4">
               {Object.values(AMENITY_CONFIG).map(config => {
@@ -71,6 +128,34 @@ export default function AnalyticsPanel() {
                   />
                 );
               })}
+            </div>
+
+            <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mt-6 mb-3">Per-Road Lane Plan</h4>
+            <div className="overflow-auto border border-slate-200 rounded-lg">
+              <table className="min-w-full text-xs">
+                <thead className="bg-slate-50 text-slate-600">
+                  <tr>
+                    <th className="text-left px-3 py-2">Road</th>
+                    <th className="text-left px-3 py-2">Between Blocks</th>
+                    <th className="text-left px-3 py-2">Lanes</th>
+                    <th className="text-left px-3 py-2">Width</th>
+                    <th className="text-left px-3 py-2">Length</th>
+                    <th className="text-left px-3 py-2">Class</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {roadRows.map((row) => (
+                    <tr key={row.roadKey} className="border-t border-slate-100">
+                      <td className="px-3 py-2 font-semibold text-slate-700">{row.roadKey}</td>
+                      <td className="px-3 py-2 text-slate-600">({row.minX + 1},{row.minY + 1}) ↔ ({row.maxX + 1},{row.maxY + 1})</td>
+                      <td className="px-3 py-2 text-slate-700">{row.lanes}</td>
+                      <td className="px-3 py-2 text-slate-700">{row.width}m</td>
+                      <td className="px-3 py-2 text-slate-700">{row.segments} blocks</td>
+                      <td className="px-3 py-2 capitalize text-slate-700">{row.className}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
