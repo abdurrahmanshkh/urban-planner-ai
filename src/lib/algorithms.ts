@@ -69,14 +69,68 @@ const getCellDemand = (cell?: GridCell): number => {
   return 1.2; // residential baseline
 };
 
+const SERVICE_RADIUS_METERS: Record<string, number> = {
+  hospital: 1800,
+  school: 1200,
+  park: 800,
+  supermarket: 700,
+  bus_station: 1200,
+  community_center: 1000,
+};
+
+const SERVICE_WEIGHT: Record<string, number> = {
+  hospital: 2.2,
+  school: 1.8,
+  park: 1.6,
+  supermarket: 1.4,
+  bus_station: 1.3,
+  community_center: 1.2,
+};
+
+function scoreAccessibilityAtCell(
+  cell: GridCell,
+  amenitiesByType: Record<string, GridCell[]>,
+  blockSizeMeters: number
+): number {
+  let accessibility = 1;
+
+  Object.keys(AMENITY_CONFIG).forEach((amenityType) => {
+    const amenityCells = amenitiesByType[amenityType] || [];
+    if (amenityCells.length === 0) return;
+
+    const nearest = Math.min(...amenityCells.map((a) => getDistance(cell.x, cell.y, a.x, a.y)));
+    const radius = getServiceRadiusInCells(SERVICE_RADIUS_METERS[amenityType] ?? 700, blockSizeMeters);
+    const weight = SERVICE_WEIGHT[amenityType] ?? 1;
+    const contribution = Math.max(0, 1 - nearest / radius) * weight;
+    accessibility += contribution;
+  });
+
+  return Math.max(0, Math.min(10, accessibility));
+}
+
+function calculateAverageAccessibility(
+  cells: GridCell[],
+  amenitiesByType: Record<string, GridCell[]>,
+  blockSizeMeters: number
+): number {
+  if (cells.length === 0) return 0;
+  const total = cells.reduce(
+    (sum, cell) => sum + scoreAccessibilityAtCell(cell, amenitiesByType, blockSizeMeters),
+    0
+  );
+  return total / cells.length;
+}
+
 // 1. ZONING ALGORITHM
 export function placeAmenities(
   gridSize: number,
   initialGrid: Record<string, GridCell>,
-  amenitiesToPlace: Record<string, number>
+  amenitiesToPlace: Record<string, number>,
+  blockSizeMeters: number
 ): Record<string, GridCell> {
   const grid = { ...initialGrid };
   const activeResidentialCells = Object.values(grid).filter((c) => c.type === "residential");
+  const activeCells = Object.values(grid).filter((c) => c.type !== "disabled");
   if (activeResidentialCells.length === 0) return grid;
 
   const centerX = (gridSize - 1) / 2;
@@ -124,7 +178,18 @@ export function placeAmenities(
 
         const centrality = getDistance(cell.x, cell.y, centerX, centerY);
         const targetDistance = getDistance(cell.x, cell.y, targetX, targetY);
-        const score = targetDistance * 1.8 + centrality * 0.4 + spacingPenalty;
+
+        const temporaryAmenitiesByType: Record<string, GridCell[]> = {};
+        placedPositions.forEach((placed) => {
+          if (!temporaryAmenitiesByType[placed.type]) temporaryAmenitiesByType[placed.type] = [];
+          temporaryAmenitiesByType[placed.type].push({ x: placed.x, y: placed.y, type: "amenity", amenityType: placed.type });
+        });
+        if (!temporaryAmenitiesByType[amenityType]) temporaryAmenitiesByType[amenityType] = [];
+        temporaryAmenitiesByType[amenityType].push({ ...cell, type: "amenity", amenityType });
+
+        const projectedAvgAccessibility = calculateAverageAccessibility(activeCells, temporaryAmenitiesByType, blockSizeMeters);
+        const optimizationPenalty = (10 - projectedAvgAccessibility) * 2.4;
+        const score = targetDistance * 1.8 + centrality * 0.4 + spacingPenalty + optimizationPenalty;
 
         if (score < bestScore) {
           bestScore = score;
@@ -254,40 +319,11 @@ export function calculateEconomics(
     roadSegmentsByCell.set(road.toKey, toList);
   });
 
-  const serviceRadiusMeters: Record<string, number> = {
-    hospital: 1800,
-    school: 1200,
-    park: 800,
-    supermarket: 700,
-    bus_station: 1200,
-    community_center: 1000,
-  };
-
-  const serviceWeight: Record<string, number> = {
-    hospital: 2.2,
-    school: 1.8,
-    park: 1.6,
-    supermarket: 1.4,
-    bus_station: 1.3,
-    community_center: 1.2,
-  };
-
   const desirabilityWeightByCell = new Map<string, number>();
   let totalWeight = 0;
 
   activeCells.forEach((cell) => {
-    let accessibility = 1;
-
-    Object.keys(AMENITY_CONFIG).forEach((amenityType) => {
-      const amenityCells = amenitiesByType[amenityType] || [];
-      if (amenityCells.length === 0) return;
-
-      const nearest = Math.min(...amenityCells.map((a) => getDistance(cell.x, cell.y, a.x, a.y)));
-      const radius = getServiceRadiusInCells(serviceRadiusMeters[amenityType] ?? 700, blockSizeMeters);
-      const weight = serviceWeight[amenityType] ?? 1;
-      const contribution = Math.max(0, 1 - nearest / radius) * weight;
-      accessibility += contribution;
-    });
+    let accessibility = scoreAccessibilityAtCell(cell, amenitiesByType, blockSizeMeters);
 
     const connectedRoads = roadSegmentsByCell.get(`${cell.x},${cell.y}`) || [];
     const avgRoadWidth =

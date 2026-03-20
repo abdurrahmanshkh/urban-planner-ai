@@ -9,7 +9,7 @@ import ZoningWizard from "./ZoningWizard";
 import MapProcessor from "./MapProcessor";
 import InteractiveGrid from "./InteractiveGrid";
 import { usePlanStore } from "@/store/usePlanStore";
-import { AMENITY_CONFIG } from "@/lib/planningMath";
+import { AMENITY_CONFIG, calculateIdealAmenities, getBlockAreaHectares } from "@/lib/planningMath";
 import type { GridCell } from "@/store/usePlanStore";
 
 const getExportCellAppearance = (cell: GridCell) => {
@@ -26,12 +26,56 @@ const getExportCellAppearance = (cell: GridCell) => {
 };
 
 export default function GridVisualizer() {
-  const { gridSize, gridData, isGenerating, population, totalLandValue } = usePlanStore();
+  const {
+    gridSize,
+    gridData,
+    isGenerating,
+    population,
+    totalLandValue,
+    blockSizeMeters,
+    landAreaHectares,
+    computedDevelopableAreaHectares,
+    roadAreaHectares,
+    roadNetwork,
+    amenities,
+  } = usePlanStore();
   const [isExporting, setIsExporting] = useState(false);
 
   const hasGridData = Object.keys(gridData).length > 0;
   const hasGeneratedPlan = Object.values(gridData).some((c) => c.type === "amenity");
   const sortedCells = Object.values(gridData).sort((a, b) => (a.y - b.y) || (a.x - b.x));
+  const cells = Object.values(gridData);
+  const activeCells = cells.filter((cell) => cell.type !== "disabled");
+  const modeledAreaHectares = activeCells.length * getBlockAreaHectares(blockSizeMeters);
+  const totalValue = activeCells.reduce((sum, cell) => sum + (cell.landValue || 0), 0);
+  const avgValue = activeCells.length ? totalValue / activeCells.length : 0;
+  const avgAccessibility = activeCells.length
+    ? activeCells.reduce((sum, cell) => sum + (cell.accessibilityScore || 0), 0) / activeCells.length
+    : 0;
+  const amenityActualCounts = cells.reduce<Record<string, number>>((acc, cell) => {
+    if (cell.type === "amenity" && cell.amenityType) {
+      acc[cell.amenityType] = (acc[cell.amenityType] || 0) + 1;
+    }
+    return acc;
+  }, {});
+  const idealAmenities = calculateIdealAmenities(population, gridSize);
+  const roadRows = Object.values(
+    Object.values(roadNetwork).reduce<Record<string, { roadKey: string; className: string; lanes: number; width: number; segments: number }>>((acc, road) => {
+      const key = road.lineKey;
+      if (!acc[key]) {
+        acc[key] = {
+          roadKey: key,
+          className: road.roadClass,
+          lanes: road.laneCount,
+          width: road.widthMeters,
+          segments: 1,
+        };
+      } else {
+        acc[key].segments += 1;
+      }
+      return acc;
+    }, {})
+  ).sort((a, b) => a.roadKey.localeCompare(b.roadKey, undefined, { numeric: true }));
 
   const exportToPDF = async () => {
     if (!hasGeneratedPlan) return;
@@ -40,7 +84,7 @@ export default function GridVisualizer() {
     try {
       // Dynamically import heavy libraries to prevent Next.js SSR build errors
       const html2canvas = (await import("html2canvas")).default;
-      const { jsPDF } = await import("jspdf");
+      const { default: jsPDF } = await import("jspdf");
 
       const gridElement = document.getElementById("pdf-export-grid");
       if (!gridElement) throw new Error("Grid element not found");
@@ -50,28 +94,168 @@ export default function GridVisualizer() {
 
       const pdf = new jsPDF("p", "mm", "a4");
       const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const margin = 14;
+      const fullDate = new Date().toLocaleString();
+      const formatINR = (value: number) => {
+        if (value > 10000000) return `INR ${(value / 10000000).toFixed(2)} Cr`;
+        if (value > 100000) return `INR ${(value / 100000).toFixed(2)} L`;
+        return `INR ${Math.round(value).toLocaleString()}`;
+      };
 
-      // Header
-      pdf.setFontSize(22);
+      // Cover + executive summary
+      pdf.setFillColor(37, 99, 235);
+      pdf.rect(0, 0, pdfWidth, 38, "F");
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(24);
+      pdf.text("UrbanPlan AI Report", margin, 18);
+      pdf.setFontSize(11);
+      pdf.text("Advanced municipal zoning and infrastructure summary", margin, 27);
+      pdf.text(`Generated: ${fullDate}`, margin, 33);
+
       pdf.setTextColor(30, 41, 59);
-      pdf.text("Municipal Urban Plan Report", 15, 20);
+      pdf.setFontSize(13);
+      pdf.text("Executive Metrics", margin, 48);
+      const metricCards = [
+        ["Population", population.toLocaleString()],
+        ["Grid", `${gridSize} x ${gridSize}`],
+        ["Modeled Area", `${modeledAreaHectares.toFixed(1)} ha`],
+        ["Developable Area", `${computedDevelopableAreaHectares.toFixed(1)} ha`],
+        ["Road Land Use", `${roadAreaHectares.toFixed(1)} ha`],
+        ["Avg Accessibility", `${avgAccessibility.toFixed(2)} / 10`],
+        ["Avg Plot Value", formatINR(avgValue)],
+        ["Base Land Value", formatINR(totalLandValue)],
+      ];
+      const cardW = (pdfWidth - margin * 2 - 8) / 2;
+      metricCards.forEach(([label, value], index) => {
+        const col = index % 2;
+        const row = Math.floor(index / 2);
+        const x = margin + col * (cardW + 8);
+        const y = 53 + row * 16;
+        pdf.setFillColor(248, 250, 252);
+        pdf.roundedRect(x, y, cardW, 13, 2, 2, "F");
+        pdf.setFontSize(9);
+        pdf.setTextColor(100, 116, 139);
+        pdf.text(label, x + 3, y + 5);
+        pdf.setFontSize(10.5);
+        pdf.setTextColor(30, 41, 59);
+        pdf.text(value, x + 3, y + 10);
+      });
 
+      const mapY = 122;
+      const mapW = 125;
+      const mapH = 125 * (canvas.height / canvas.width);
       pdf.setFontSize(12);
-      pdf.setTextColor(100, 116, 139);
-      pdf.text(`Generated on: ${new Date().toLocaleDateString()}`, 15, 30);
+      pdf.setTextColor(15, 23, 42);
+      pdf.text("Zoning Map Snapshot", margin, mapY - 4);
+      pdf.addImage(imgData, "PNG", margin, mapY, mapW, Math.min(130, mapH));
 
-      // Metrics
-      pdf.setFontSize(14);
+      const legendX = margin + mapW + 8;
+      pdf.setFontSize(12);
+      pdf.text("Legend", legendX, mapY - 4);
+      const legendRows: Array<{ label: string; color: [number, number, number] }> = [
+        { label: "Residential Block", color: [254, 240, 138] },
+        { label: "Unavailable / Outside Boundary", color: [241, 245, 249] },
+        ...Object.values(AMENITY_CONFIG).map((config) => ({
+          label: config.name,
+          color: [
+            parseInt(config.color.slice(1, 3), 16),
+            parseInt(config.color.slice(3, 5), 16),
+            parseInt(config.color.slice(5, 7), 16),
+          ] as [number, number, number],
+        })),
+      ];
+
+      legendRows.forEach((item, index) => {
+        const y = mapY + 5 + index * 9;
+        pdf.setFillColor(item.color[0], item.color[1], item.color[2]);
+        pdf.roundedRect(legendX, y - 3, 5, 5, 1, 1, "F");
+        pdf.setTextColor(15, 23, 42);
+        pdf.setFontSize(9);
+        pdf.text(item.label, legendX + 8, y + 1);
+      });
+
+      pdf.setFontSize(8.5);
+      pdf.setTextColor(71, 85, 105);
+      const inputSummary = [
+        `Inputs: ${landAreaHectares} ha land area, ${blockSizeMeters}m blocks.`,
+        `Amenity sliders configured: ${Object.entries(amenities).map(([key, value]) => `${key}:${value}`).join(" | ")}`,
+      ];
+      const wrappedInputSummary = pdf.splitTextToSize(inputSummary.join(" "), pdfWidth - margin * 2);
+      pdf.text(
+        wrappedInputSummary,
+        margin,
+        pdfHeight - 12
+      );
+
+      // Page 2: infrastructure and coverage detail
+      pdf.addPage();
+      pdf.setFillColor(15, 23, 42);
+      pdf.rect(0, 0, pdfWidth, 20, "F");
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(16);
+      pdf.text("Infrastructure & Coverage Detail", margin, 13);
+
       pdf.setTextColor(30, 41, 59);
-      pdf.text(`Target Population: ${population.toLocaleString()}`, 15, 45);
-      pdf.text(`Base Land Value: INR ${(totalLandValue / 10000000).toFixed(2)} Cr`, 15, 53);
+      pdf.setFontSize(12);
+      pdf.text("Amenity Adequacy", margin, 30);
+      pdf.setFontSize(9);
+      let rowY = 36;
+      pdf.setFillColor(241, 245, 249);
+      pdf.rect(margin, rowY - 5, pdfWidth - margin * 2, 7, "F");
+      pdf.text("Amenity", margin + 2, rowY);
+      pdf.text("Placed", margin + 58, rowY);
+      pdf.text("Ideal", margin + 78, rowY);
+      pdf.text("Coverage", margin + 96, rowY);
+      rowY += 7;
 
-      // Grid Image
-      pdf.addImage(imgData, "PNG", 15, 65, pdfWidth - 30, (pdfWidth - 30) * (canvas.height / canvas.width));
+      Object.values(AMENITY_CONFIG).forEach((config, index) => {
+        const placed = amenityActualCounts[config.id] || 0;
+        const ideal = idealAmenities[config.id] || 1;
+        const pct = Math.min(100, Math.round((placed / ideal) * 100));
+        if (index % 2 === 0) {
+          pdf.setFillColor(248, 250, 252);
+          pdf.rect(margin, rowY - 5, pdfWidth - margin * 2, 7, "F");
+        }
+        pdf.setTextColor(30, 41, 59);
+        pdf.text(config.name, margin + 2, rowY);
+        pdf.text(String(placed), margin + 61, rowY);
+        pdf.text(String(ideal), margin + 81, rowY);
+        pdf.text(`${pct}%`, margin + 98, rowY);
+        rowY += 7;
+      });
 
-      // Footer
-      pdf.setFontSize(10);
-      pdf.text("Powered by UrbanPlan AI Engine", 15, 280);
+      rowY += 8;
+      pdf.setFontSize(12);
+      pdf.text("Road Recommendation Mix", margin, rowY);
+      rowY += 7;
+      pdf.setFontSize(9);
+      pdf.setFillColor(241, 245, 249);
+      pdf.rect(margin, rowY - 5, pdfWidth - margin * 2, 7, "F");
+      pdf.text("Road", margin + 2, rowY);
+      pdf.text("Class", margin + 26, rowY);
+      pdf.text("Lanes", margin + 52, rowY);
+      pdf.text("Width", margin + 70, rowY);
+      pdf.text("Segments", margin + 92, rowY);
+      rowY += 7;
+
+      roadRows.slice(0, 20).forEach((road, index) => {
+        if (rowY > pdfHeight - 18) return;
+        if (index % 2 === 0) {
+          pdf.setFillColor(248, 250, 252);
+          pdf.rect(margin, rowY - 5, pdfWidth - margin * 2, 7, "F");
+        }
+        pdf.text(road.roadKey, margin + 2, rowY);
+        pdf.text(road.className, margin + 26, rowY);
+        pdf.text(String(road.lanes), margin + 53, rowY);
+        pdf.text(`${road.width}m`, margin + 70, rowY);
+        pdf.text(String(road.segments), margin + 94, rowY);
+        rowY += 7;
+      });
+
+      pdf.setFontSize(8.5);
+      pdf.setTextColor(100, 116, 139);
+      pdf.text("Powered by UrbanPlan AI - Suitable for academic planning review", margin, pdfHeight - 8);
 
       pdf.save(`UrbanPlan_Report_${new Date().getTime()}.pdf`);
     } catch (error) {
