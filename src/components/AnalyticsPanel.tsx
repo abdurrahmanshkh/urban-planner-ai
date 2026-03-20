@@ -4,10 +4,10 @@
 import { motion } from "framer-motion";
 import { Activity, IndianRupee, Users } from "lucide-react";
 import { usePlanStore } from "@/store/usePlanStore";
-import { AMENITY_CONFIG, calculateIdealAmenities } from "@/lib/planningMath";
+import { AMENITY_CONFIG, calculateIdealAmenities, getBlockAreaHectares } from "@/lib/planningMath";
 
 export default function AnalyticsPanel() {
-  const { gridData, population, gridSize, amenities } = usePlanStore();
+  const { gridData, population, gridSize, amenities, blockSizeMeters, roadAreaHectares, roadNetwork } = usePlanStore();
 
   const cells = Object.values(gridData);
   const activeCells = cells.filter(c => c.type !== "disabled");
@@ -19,6 +19,39 @@ export default function AnalyticsPanel() {
   
   const totalAccess = activeCells.reduce((sum, cell) => sum + (cell.accessibilityScore || 0), 0);
   const avgAccess = activeCells.length > 0 ? totalAccess / activeCells.length : 0;
+  const modeledAreaHectares = activeCells.length * getBlockAreaHectares(blockSizeMeters);
+  const roads = Object.values(roadNetwork);
+  const roadMix = roads.reduce<Record<string, number>>((acc, road) => {
+    const key = `${road.roadClass}|${road.laneCount}|${road.widthMeters}`;
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+  const topRoadProfiles = Object.entries(roadMix)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6);
+
+  const roadRows = roads
+    .map((road) => {
+      const [type, x, y] = road.id.split(":");
+      const axis = type === "h" ? "H" : "V";
+      const xIndex = Number(x) + 1;
+      const yIndex = Number(y) + 1;
+      const [fromX, fromY] = road.fromKey.split(",").map(Number);
+      const [toX, toY] = road.toKey.split(",").map(Number);
+
+      return {
+        roadKey: `${axis}(${xIndex},${yIndex})`,
+        className: road.roadClass,
+        lanes: road.laneCount,
+        width: road.widthMeters,
+        between: `(${fromX + 1},${fromY + 1}) ↔ (${toX + 1},${toY + 1})`,
+      };
+    })
+    .sort((a, b) => {
+      if (a.roadKey < b.roadKey) return -1;
+      if (a.roadKey > b.roadKey) return 1;
+      return 0;
+    });
 
   // Calculate ideals for the Adequacy bars
   const ideals = calculateIdealAmenities(population, gridSize);
@@ -45,6 +78,9 @@ export default function AnalyticsPanel() {
 
         <div className="space-y-4">
           <MetricCard icon={<Users size={18} />} title="Est. Population" value={population.toLocaleString()} />
+          <MetricCard icon={<Activity size={18} />} title="Modeled Land Area" value={`${modeledAreaHectares.toFixed(1)} ha`} />
+          <MetricCard icon={<Activity size={18} />} title="Road Land Use" value={`${roadAreaHectares.toFixed(1)} ha`} />
+          <MetricCard icon={<Activity size={18} />} title="Road Segments" value={Object.keys(roadNetwork).length.toLocaleString()} />
           <MetricCard icon={<IndianRupee size={18} />} title="Avg. Plot Value" value={hasGenerated ? formatINR(avgValue) : "--"} />
           <MetricCard 
             icon={<Activity size={18} />} 
@@ -55,6 +91,19 @@ export default function AnalyticsPanel() {
 
         {hasGenerated && (
           <div className="mt-8">
+            <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">Road Recommendation Mix</h4>
+            <div className="space-y-2 mb-6">
+              {topRoadProfiles.length > 0 ? topRoadProfiles.map(([profile, count]) => {
+                const [roadClass, lanes, width] = profile.split("|");
+                return (
+                  <div key={profile} className="flex items-center justify-between text-sm bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
+                    <span className="font-medium text-slate-700">{roadClass} • {lanes} lanes • {width}m</span>
+                    <span className="text-slate-500">{count} segments</span>
+                  </div>
+                );
+              }) : <p className="text-sm text-slate-500">No active roads yet.</p>}
+            </div>
+
             <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">Coverage Adequacy</h4>
             <div className="space-y-4">
               {Object.values(AMENITY_CONFIG).map(config => {
@@ -71,6 +120,32 @@ export default function AnalyticsPanel() {
                   />
                 );
               })}
+            </div>
+
+            <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mt-6 mb-3">Per-Road Lane Plan</h4>
+            <div className="overflow-auto border border-slate-200 rounded-lg">
+              <table className="min-w-full text-xs">
+                <thead className="bg-slate-50 text-slate-600">
+                  <tr>
+                    <th className="text-left px-3 py-2">Road</th>
+                    <th className="text-left px-3 py-2">Between Blocks</th>
+                    <th className="text-left px-3 py-2">Lanes</th>
+                    <th className="text-left px-3 py-2">Width</th>
+                    <th className="text-left px-3 py-2">Class</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {roadRows.map((row) => (
+                    <tr key={`${row.roadKey}-${row.between}`} className="border-t border-slate-100">
+                      <td className="px-3 py-2 font-semibold text-slate-700">{row.roadKey}</td>
+                      <td className="px-3 py-2 text-slate-600">{row.between}</td>
+                      <td className="px-3 py-2 text-slate-700">{row.lanes}</td>
+                      <td className="px-3 py-2 text-slate-700">{row.width}m</td>
+                      <td className="px-3 py-2 capitalize text-slate-700">{row.className}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
