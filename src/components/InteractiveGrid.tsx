@@ -16,7 +16,7 @@ export default function InteractiveGrid({ editMode = false }: { editMode?: boole
   const modeledAreaHectares = activeCellCount * getBlockAreaHectares(blockSizeMeters);
 
   // Find max land value for heatmap scaling
-  const maxLandValue = Math.max(...cells.map(c => c.landValue || 0));
+  const maxLandValue = Math.max(1, ...cells.map(c => c.landValue || 0));
 
   const handleDragStart = (e: React.DragEvent, cellKey: string) => {
     e.dataTransfer.setData("cellKey", cellKey);
