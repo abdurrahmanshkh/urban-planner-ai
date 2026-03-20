@@ -83,13 +83,13 @@ export default function InteractiveGrid() {
         </div>
       </div>
 
-      <p className="text-xs text-slate-500 -mt-2 mb-3 px-1">Block gaps represent roads. Road widths/lanes are listed in the analytics panel.</p>
+      <p className="text-xs text-slate-500 -mt-2 mb-3 px-1">Block gaps represent roads. Exact road IDs and lane counts are listed in the analytics panel.</p>
 
       {/* The Grid */}
       <div className="flex-1 flex items-center justify-center p-2">
         <div className="relative w-full max-w-[600px] aspect-square">
           <div
-            className="grid gap-[3px] bg-slate-300 p-[3px] rounded-lg shadow-inner w-full h-full"
+            className="grid gap-[2px] bg-slate-200 p-[2px] rounded-lg shadow-inner w-full h-full"
             style={{ gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))` }}
           >
           {cells.map((cell) => {
@@ -105,7 +105,7 @@ export default function InteractiveGrid() {
                 onDragStart={(e) => handleDragStart(e, cellKey)}
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, cellKey)}
-                className={`relative flex items-center justify-center aspect-square transition-all 
+                className={`relative flex items-center justify-center aspect-square transition-all border 
                   ${isDraggable ? "cursor-grab active:cursor-grabbing hover:brightness-110 shadow-sm z-10" : ""}
                   ${cell.type === "residential" ? "hover:bg-yellow-200/80 transition-colors" : ""}
                 `}
