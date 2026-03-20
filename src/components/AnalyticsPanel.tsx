@@ -20,6 +20,15 @@ export default function AnalyticsPanel() {
   const totalAccess = activeCells.reduce((sum, cell) => sum + (cell.accessibilityScore || 0), 0);
   const avgAccess = activeCells.length > 0 ? totalAccess / activeCells.length : 0;
   const modeledAreaHectares = activeCells.length * getBlockAreaHectares(blockSizeMeters);
+  const roads = Object.values(roadNetwork);
+  const roadMix = roads.reduce<Record<string, number>>((acc, road) => {
+    const key = `${road.roadClass}|${road.laneCount}|${road.widthMeters}`;
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+  const topRoadProfiles = Object.entries(roadMix)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6);
 
   // Calculate ideals for the Adequacy bars
   const ideals = calculateIdealAmenities(population, gridSize);
@@ -59,6 +68,19 @@ export default function AnalyticsPanel() {
 
         {hasGenerated && (
           <div className="mt-8">
+            <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">Road Recommendation Mix</h4>
+            <div className="space-y-2 mb-6">
+              {topRoadProfiles.length > 0 ? topRoadProfiles.map(([profile, count]) => {
+                const [roadClass, lanes, width] = profile.split("|");
+                return (
+                  <div key={profile} className="flex items-center justify-between text-sm bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
+                    <span className="font-medium text-slate-700">{roadClass} • {lanes} lanes • {width}m</span>
+                    <span className="text-slate-500">{count} segments</span>
+                  </div>
+                );
+              }) : <p className="text-sm text-slate-500">No active roads yet.</p>}
+            </div>
+
             <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">Coverage Adequacy</h4>
             <div className="space-y-4">
               {Object.values(AMENITY_CONFIG).map(config => {

@@ -7,7 +7,7 @@ import { AMENITY_CONFIG, getBlockAreaHectares } from "@/lib/planningMath";
 import { Map, TrendingUp } from "lucide-react";
 
 export default function InteractiveGrid() {
-  const { gridSize, gridData, moveAmenity, blockSizeMeters, roadNetwork } = usePlanStore();
+  const { gridSize, gridData, moveAmenity, blockSizeMeters } = usePlanStore();
   const [viewMode, setViewMode] = useState<"zoning" | "heatmap">("zoning");
 
   const cells = Object.values(gridData);
@@ -83,11 +83,13 @@ export default function InteractiveGrid() {
         </div>
       </div>
 
+      <p className="text-xs text-slate-500 -mt-2 mb-3 px-1">Block gaps represent roads. Road widths/lanes are listed in the analytics panel.</p>
+
       {/* The Grid */}
       <div className="flex-1 flex items-center justify-center p-2">
         <div className="relative w-full max-w-[600px] aspect-square">
           <div
-            className="grid gap-[2px] bg-slate-200 p-[2px] rounded-lg shadow-inner w-full h-full"
+            className="grid gap-[3px] bg-slate-300 p-[3px] rounded-lg shadow-inner w-full h-full"
             style={{ gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))` }}
           >
           {cells.map((cell) => {
@@ -103,7 +105,7 @@ export default function InteractiveGrid() {
                 onDragStart={(e) => handleDragStart(e, cellKey)}
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, cellKey)}
-                className={`relative flex items-center justify-center border aspect-square transition-all 
+                className={`relative flex items-center justify-center aspect-square transition-all 
                   ${isDraggable ? "cursor-grab active:cursor-grabbing hover:brightness-110 shadow-sm z-10" : ""}
                   ${cell.type === "residential" ? "hover:bg-yellow-200/80 transition-colors" : ""}
                 `}
@@ -127,36 +129,6 @@ export default function InteractiveGrid() {
             );
           })}
           </div>
-
-          <svg className="absolute inset-0 pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
-            {Object.values(roadNetwork).map((road) => {
-              const [fromX, fromY] = road.fromKey.split(",").map(Number);
-              const [toX, toY] = road.toKey.split(",").map(Number);
-
-              const x1 = ((fromX + 0.5) / gridSize) * 100;
-              const y1 = ((fromY + 0.5) / gridSize) * 100;
-              const x2 = ((toX + 0.5) / gridSize) * 100;
-              const y2 = ((toY + 0.5) / gridSize) * 100;
-
-              const strokeWidth = Math.max(0.15, road.widthMeters / (blockSizeMeters * 1.3));
-              const strokeColor = road.roadClass === "arterial" ? "#334155" : road.roadClass === "collector" ? "#475569" : "#64748b";
-
-              return (
-                <line
-                  key={road.id}
-                  x1={x1}
-                  y1={y1}
-                  x2={x2}
-                  y2={y2}
-                  stroke={strokeColor}
-                  strokeWidth={strokeWidth}
-                  strokeLinecap="round"
-                >
-                  <title>{`${road.roadClass.toUpperCase()} • ${road.laneCount} lanes • ${road.widthMeters}m`}</title>
-                </line>
-              );
-            })}
-          </svg>
         </div>
       </div>
     </div>

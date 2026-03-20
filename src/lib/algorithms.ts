@@ -64,6 +64,32 @@ const getCellDemand = (cell?: GridCell): number => {
   return 1.2; // residential baseline
 };
 
+const getRoadDemandScore = (
+  grid: Record<string, GridCell>,
+  endpoints: Array<{ x: number; y: number }>
+) => {
+  const visited = new Set<string>();
+  let score = 0;
+
+  endpoints.forEach(({ x, y }) => {
+    for (let ny = y - 1; ny <= y + 1; ny++) {
+      for (let nx = x - 1; nx <= x + 1; nx++) {
+        const key = `${nx},${ny}`;
+        if (visited.has(key)) continue;
+        visited.add(key);
+        const cell = grid[key];
+        if (!cell || cell.type === "disabled") continue;
+
+        // Nearby context contributes slightly less than direct frontage.
+        const isEndpoint = endpoints.some((p) => p.x === nx && p.y === ny);
+        score += getCellDemand(cell) * (isEndpoint ? 1 : 0.55);
+      }
+    }
+  });
+
+  return score;
+};
+
 // 1. ZONING ALGORITHM
 export function placeAmenities(
   gridSize: number,
@@ -151,7 +177,10 @@ export function generateRoadNetwork(grid: Record<string, GridCell>): Record<stri
     const downCell = grid[downKey];
 
     if (rightCell && rightCell.type !== "disabled") {
-      const demandScore = getCellDemand(cell) + getCellDemand(rightCell);
+      const demandScore = getRoadDemandScore(grid, [
+        { x: cell.x, y: cell.y },
+        { x: rightCell.x, y: rightCell.y },
+      ]);
       const profile = classifyRoad(demandScore);
       const id = `v:${cell.x + 1}:${cell.y}`;
       roadSegments[id] = {
@@ -166,7 +195,10 @@ export function generateRoadNetwork(grid: Record<string, GridCell>): Record<stri
     }
 
     if (downCell && downCell.type !== "disabled") {
-      const demandScore = getCellDemand(cell) + getCellDemand(downCell);
+      const demandScore = getRoadDemandScore(grid, [
+        { x: cell.x, y: cell.y },
+        { x: downCell.x, y: downCell.y },
+      ]);
       const profile = classifyRoad(demandScore);
       const id = `h:${cell.x}:${cell.y + 1}`;
       roadSegments[id] = {
