@@ -98,9 +98,9 @@ export default function GridVisualizer() {
       const margin = 14;
       const fullDate = new Date().toLocaleString();
       const formatINR = (value: number) => {
-        if (value > 10000000) return `₹${(value / 10000000).toFixed(2)} Cr`;
-        if (value > 100000) return `₹${(value / 100000).toFixed(2)} L`;
-        return `₹${Math.round(value).toLocaleString()}`;
+        if (value > 10000000) return `INR ${(value / 10000000).toFixed(2)} Cr`;
+        if (value > 100000) return `INR ${(value / 100000).toFixed(2)} L`;
+        return `INR ${Math.round(value).toLocaleString()}`;
       };
 
       // Cover + executive summary
@@ -118,7 +118,7 @@ export default function GridVisualizer() {
       pdf.text("Executive Metrics", margin, 48);
       const metricCards = [
         ["Population", population.toLocaleString()],
-        ["Grid", `${gridSize} × ${gridSize}`],
+        ["Grid", `${gridSize} x ${gridSize}`],
         ["Modeled Area", `${modeledAreaHectares.toFixed(1)} ha`],
         ["Developable Area", `${computedDevelopableAreaHectares.toFixed(1)} ha`],
         ["Road Land Use", `${roadAreaHectares.toFixed(1)} ha`],
@@ -153,12 +153,11 @@ export default function GridVisualizer() {
       const legendX = margin + mapW + 8;
       pdf.setFontSize(12);
       pdf.text("Legend", legendX, mapY - 4);
-      const legendRows: Array<{ label: string; icon: string; color: [number, number, number] }> = [
-        { label: "Residential Block", icon: "■", color: [254, 240, 138] },
-        { label: "Unavailable / Outside Boundary", icon: "■", color: [241, 245, 249] },
+      const legendRows: Array<{ label: string; color: [number, number, number] }> = [
+        { label: "Residential Block", color: [254, 240, 138] },
+        { label: "Unavailable / Outside Boundary", color: [241, 245, 249] },
         ...Object.values(AMENITY_CONFIG).map((config) => ({
           label: config.name,
-          icon: config.icon,
           color: [
             parseInt(config.color.slice(1, 3), 16),
             parseInt(config.color.slice(3, 5), 16),
@@ -173,14 +172,18 @@ export default function GridVisualizer() {
         pdf.roundedRect(legendX, y - 3, 5, 5, 1, 1, "F");
         pdf.setTextColor(15, 23, 42);
         pdf.setFontSize(9);
-        pdf.text(`${item.icon} ${item.label}`, legendX + 8, y + 1);
+        pdf.text(item.label, legendX + 8, y + 1);
       });
 
       pdf.setFontSize(8.5);
       pdf.setTextColor(71, 85, 105);
+      const inputSummary = [
+        `Inputs: ${landAreaHectares} ha land area, ${blockSizeMeters}m blocks.`,
+        `Amenity sliders configured: ${Object.entries(amenities).map(([key, value]) => `${key}:${value}`).join(" | ")}`,
+      ];
+      const wrappedInputSummary = pdf.splitTextToSize(inputSummary.join(" "), pdfWidth - margin * 2);
       pdf.text(
-        [`Inputs: ${landAreaHectares} ha land area, ${blockSizeMeters}m blocks.`,
-          `Amenity sliders configured: ${Object.entries(amenities).map(([key, value]) => `${key}:${value}`).join(" | ")}`],
+        wrappedInputSummary,
         margin,
         pdfHeight - 12
       );
@@ -201,9 +204,9 @@ export default function GridVisualizer() {
       pdf.setFillColor(241, 245, 249);
       pdf.rect(margin, rowY - 5, pdfWidth - margin * 2, 7, "F");
       pdf.text("Amenity", margin + 2, rowY);
-      pdf.text("Placed", margin + 60, rowY);
-      pdf.text("Ideal", margin + 80, rowY);
-      pdf.text("Coverage", margin + 100, rowY);
+      pdf.text("Placed", margin + 58, rowY);
+      pdf.text("Ideal", margin + 78, rowY);
+      pdf.text("Coverage", margin + 96, rowY);
       rowY += 7;
 
       Object.values(AMENITY_CONFIG).forEach((config, index) => {
@@ -215,10 +218,10 @@ export default function GridVisualizer() {
           pdf.rect(margin, rowY - 5, pdfWidth - margin * 2, 7, "F");
         }
         pdf.setTextColor(30, 41, 59);
-        pdf.text(`${config.icon} ${config.name}`, margin + 2, rowY);
-        pdf.text(String(placed), margin + 62, rowY);
-        pdf.text(String(ideal), margin + 82, rowY);
-        pdf.text(`${pct}%`, margin + 103, rowY);
+        pdf.text(config.name, margin + 2, rowY);
+        pdf.text(String(placed), margin + 61, rowY);
+        pdf.text(String(ideal), margin + 81, rowY);
+        pdf.text(`${pct}%`, margin + 98, rowY);
         rowY += 7;
       });
 
@@ -252,7 +255,7 @@ export default function GridVisualizer() {
 
       pdf.setFontSize(8.5);
       pdf.setTextColor(100, 116, 139);
-      pdf.text("Powered by UrbanPlan AI • Suitable for academic planning review", margin, pdfHeight - 8);
+      pdf.text("Powered by UrbanPlan AI - Suitable for academic planning review", margin, pdfHeight - 8);
 
       pdf.save(`UrbanPlan_Report_${new Date().getTime()}.pdf`);
     } catch (error) {
