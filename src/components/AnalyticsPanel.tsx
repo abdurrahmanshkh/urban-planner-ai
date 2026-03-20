@@ -30,28 +30,36 @@ export default function AnalyticsPanel() {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 6);
 
-  const roadRows = roads
-    .map((road) => {
-      const [type, x, y] = road.id.split(":");
-      const axis = type === "h" ? "H" : "V";
-      const xIndex = Number(x) + 1;
-      const yIndex = Number(y) + 1;
+  const roadRows = Object.values(
+    roads.reduce<Record<string, { roadKey: string; className: string; lanes: number; width: number; segments: number; minX: number; maxX: number; minY: number; maxY: number }>>((acc, road) => {
       const [fromX, fromY] = road.fromKey.split(",").map(Number);
       const [toX, toY] = road.toKey.split(",").map(Number);
+      const key = road.lineKey;
+      const current = acc[key];
 
-      return {
-        roadKey: `${axis}(${xIndex},${yIndex})`,
-        className: road.roadClass,
-        lanes: road.laneCount,
-        width: road.widthMeters,
-        between: `(${fromX + 1},${fromY + 1}) ↔ (${toX + 1},${toY + 1})`,
-      };
-    })
-    .sort((a, b) => {
-      if (a.roadKey < b.roadKey) return -1;
-      if (a.roadKey > b.roadKey) return 1;
-      return 0;
-    });
+      if (!current) {
+        acc[key] = {
+          roadKey: key,
+          className: road.roadClass,
+          lanes: road.laneCount,
+          width: road.widthMeters,
+          segments: 1,
+          minX: Math.min(fromX, toX),
+          maxX: Math.max(fromX, toX),
+          minY: Math.min(fromY, toY),
+          maxY: Math.max(fromY, toY),
+        };
+      } else {
+        current.segments += 1;
+        current.minX = Math.min(current.minX, fromX, toX);
+        current.maxX = Math.max(current.maxX, fromX, toX);
+        current.minY = Math.min(current.minY, fromY, toY);
+        current.maxY = Math.max(current.maxY, fromY, toY);
+      }
+
+      return acc;
+    }, {})
+  ).sort((a, b) => a.roadKey.localeCompare(b.roadKey, undefined, { numeric: true }));
 
   // Calculate ideals for the Adequacy bars
   const ideals = calculateIdealAmenities(population, gridSize);
@@ -131,16 +139,18 @@ export default function AnalyticsPanel() {
                     <th className="text-left px-3 py-2">Between Blocks</th>
                     <th className="text-left px-3 py-2">Lanes</th>
                     <th className="text-left px-3 py-2">Width</th>
+                    <th className="text-left px-3 py-2">Length</th>
                     <th className="text-left px-3 py-2">Class</th>
                   </tr>
                 </thead>
                 <tbody>
                   {roadRows.map((row) => (
-                    <tr key={`${row.roadKey}-${row.between}`} className="border-t border-slate-100">
+                    <tr key={row.roadKey} className="border-t border-slate-100">
                       <td className="px-3 py-2 font-semibold text-slate-700">{row.roadKey}</td>
-                      <td className="px-3 py-2 text-slate-600">{row.between}</td>
+                      <td className="px-3 py-2 text-slate-600">({row.minX + 1},{row.minY + 1}) ↔ ({row.maxX + 1},{row.maxY + 1})</td>
                       <td className="px-3 py-2 text-slate-700">{row.lanes}</td>
                       <td className="px-3 py-2 text-slate-700">{row.width}m</td>
+                      <td className="px-3 py-2 text-slate-700">{row.segments} blocks</td>
                       <td className="px-3 py-2 capitalize text-slate-700">{row.className}</td>
                     </tr>
                   ))}

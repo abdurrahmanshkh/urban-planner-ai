@@ -71,8 +71,8 @@ export const usePlanStore = create<PlanState>((set, get) => ({
   },
 
   setGridData: (size, data, developableAreaHectares) => {
-    const { blockSizeMeters, landAreaHectares } = get();
-    const roadNetwork = generateRoadNetwork(data);
+    const { blockSizeMeters, landAreaHectares, population } = get();
+    const roadNetwork = generateRoadNetwork(data, population);
     const roadAreaHectares = calculateRoadAreaHectares(roadNetwork, blockSizeMeters);
     const inferredDevelopableArea = Math.max(0, landAreaHectares - roadAreaHectares);
 
@@ -107,13 +107,13 @@ export const usePlanStore = create<PlanState>((set, get) => ({
       // Simulate a complex calculation delay for UX purposes (1.5 seconds)
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      const { gridSize, gridData, amenities, totalLandValue, blockSizeMeters, landAreaHectares } = get();
+      const { gridSize, gridData, amenities, totalLandValue, blockSizeMeters, landAreaHectares, population } = get();
 
       // Step 1: Constraint-based Amenity Placement
       let newGrid = placeAmenities(gridSize, gridData, amenities);
 
       // Step 2: Dynamic road network generation between all active blocks
-      const roadNetwork = generateRoadNetwork(newGrid);
+      const roadNetwork = generateRoadNetwork(newGrid, population);
       const roadAreaHectares = calculateRoadAreaHectares(roadNetwork, blockSizeMeters);
 
       // Step 3: Proportional Economics Calculation
@@ -133,7 +133,7 @@ export const usePlanStore = create<PlanState>((set, get) => ({
     }
   },
   moveAmenity: (fromKey, toKey) => {
-    const { gridData, totalLandValue, blockSizeMeters, landAreaHectares } = get();
+    const { gridData, totalLandValue, blockSizeMeters, landAreaHectares, population } = get();
     const fromCell = gridData[fromKey];
     const toCell = gridData[toKey];
 
@@ -152,7 +152,7 @@ export const usePlanStore = create<PlanState>((set, get) => ({
     newGrid[fromKey] = { ...fromCell, type: 'residential', amenityType: undefined };
 
     // Instantly recalculate the economics (Heatmap & Accessibility)
-    const roadNetwork = generateRoadNetwork(newGrid);
+    const roadNetwork = generateRoadNetwork(newGrid, population);
     const roadAreaHectares = calculateRoadAreaHectares(roadNetwork, blockSizeMeters);
     const finalizedGrid = calculateEconomics(newGrid, totalLandValue, blockSizeMeters, roadNetwork);
 

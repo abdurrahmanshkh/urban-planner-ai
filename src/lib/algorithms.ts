@@ -10,6 +10,7 @@ export type RoadClass = "local" | "collector" | "arterial";
 
 export interface RoadSegment {
   id: string;
+  lineKey: string;
   fromKey: string;
   toKey: string;
   orientation: "horizontal" | "vertical";
@@ -33,11 +34,15 @@ const getAmenitySpacingRules = (amenityType: string) => {
   }
 };
 
-const classifyRoad = (demandScore: number): { roadClass: RoadClass; laneCount: number; widthMeters: number } => {
-  if (demandScore >= 5) {
+const classifyRoad = (
+  demandScore: number,
+  amenitiesNearby: number,
+  populationPerCell: number
+): { roadClass: RoadClass; laneCount: number; widthMeters: number } => {
+  if (demandScore >= 18 || amenitiesNearby >= 8 || populationPerCell >= 240) {
     return { roadClass: "arterial", laneCount: 4, widthMeters: 20 };
   }
-  if (demandScore >= 3.1) {
+  if (demandScore >= 10 || amenitiesNearby >= 4 || populationPerCell >= 140) {
     return { roadClass: "collector", laneCount: 3, widthMeters: 14 };
   }
   return { roadClass: "local", laneCount: 2, widthMeters: 10 };
@@ -62,32 +67,6 @@ const getCellDemand = (cell?: GridCell): number => {
   }
 
   return 1.2; // residential baseline
-};
-
-const getRoadDemandScore = (
-  grid: Record<string, GridCell>,
-  endpoints: Array<{ x: number; y: number }>
-) => {
-  const visited = new Set<string>();
-  let score = 0;
-
-  endpoints.forEach(({ x, y }) => {
-    for (let ny = y - 1; ny <= y + 1; ny++) {
-      for (let nx = x - 1; nx <= x + 1; nx++) {
-        const key = `${nx},${ny}`;
-        if (visited.has(key)) continue;
-        visited.add(key);
-        const cell = grid[key];
-        if (!cell || cell.type === "disabled") continue;
-
-        // Nearby context contributes slightly less than direct frontage.
-        const isEndpoint = endpoints.some((p) => p.x === nx && p.y === ny);
-        score += getCellDemand(cell) * (isEndpoint ? 1 : 0.55);
-      }
-    }
-  });
-
-  return score;
 };
 
 // 1. ZONING ALGORITHM
@@ -165,53 +144,70 @@ export function placeAmenities(
   return grid;
 }
 
-export function generateRoadNetwork(grid: Record<string, GridCell>): Record<string, RoadSegment> {
+export function generateRoadNetwork(grid: Record<string, GridCell>, population: number): Record<string, RoadSegment> {
   const roadSegments: Record<string, RoadSegment> = {};
+  const cells = Object.values(grid);
+  const activeCells = cells.filter((cell) => cell.type !== "disabled");
+  if (activeCells.length === 0) return roadSegments;
 
-  Object.values(grid).forEach((cell) => {
-    if (cell.type === "disabled") return;
+  const maxX = Math.max(...cells.map((c) => c.x));
+  const maxY = Math.max(...cells.map((c) => c.y));
+  const populationPerCell = population / activeCells.length;
 
-    const rightKey = `${cell.x + 1},${cell.y}`;
-    const downKey = `${cell.x},${cell.y + 1}`;
-    const rightCell = grid[rightKey];
-    const downCell = grid[downKey];
+  const buildRoadLine = (
+    orientation: "vertical" | "horizontal",
+    lineIndex: number,
+    pairs: Array<{ from: GridCell; to: GridCell }>
+  ) => {
+    if (pairs.length === 0) return;
 
-    if (rightCell && rightCell.type !== "disabled") {
-      const demandScore = getRoadDemandScore(grid, [
-        { x: cell.x, y: cell.y },
-        { x: rightCell.x, y: rightCell.y },
-      ]);
-      const profile = classifyRoad(demandScore);
-      const id = `v:${cell.x + 1}:${cell.y}`;
-      roadSegments[id] = {
-        id,
-        fromKey: `${cell.x},${cell.y}`,
-        toKey: rightKey,
-        orientation: "vertical",
+    const uniqueCells = new Map<string, GridCell>();
+    pairs.forEach(({ from, to }) => {
+      uniqueCells.set(`${from.x},${from.y}`, from);
+      uniqueCells.set(`${to.x},${to.y}`, to);
+    });
+
+    const amenitiesNearby = Array.from(uniqueCells.values()).filter((cell) => cell.type === "amenity").length;
+    const demandScore = Array.from(uniqueCells.values()).reduce((sum, cell) => sum + getCellDemand(cell), 0);
+    const profile = classifyRoad(demandScore, amenitiesNearby, populationPerCell);
+    const lineKey = `${orientation === "vertical" ? "V" : "H"}(${lineIndex + 1})`;
+
+    pairs.forEach(({ from, to }) => {
+      const segmentId = `${lineKey}:${from.x},${from.y}->${to.x},${to.y}`;
+      roadSegments[segmentId] = {
+        id: segmentId,
+        lineKey,
+        fromKey: `${from.x},${from.y}`,
+        toKey: `${to.x},${to.y}`,
+        orientation,
         laneCount: profile.laneCount,
         widthMeters: profile.widthMeters,
         roadClass: profile.roadClass,
       };
-    }
+    });
+  };
 
-    if (downCell && downCell.type !== "disabled") {
-      const demandScore = getRoadDemandScore(grid, [
-        { x: cell.x, y: cell.y },
-        { x: downCell.x, y: downCell.y },
-      ]);
-      const profile = classifyRoad(demandScore);
-      const id = `h:${cell.x}:${cell.y + 1}`;
-      roadSegments[id] = {
-        id,
-        fromKey: `${cell.x},${cell.y}`,
-        toKey: downKey,
-        orientation: "horizontal",
-        laneCount: profile.laneCount,
-        widthMeters: profile.widthMeters,
-        roadClass: profile.roadClass,
-      };
+  for (let x = 1; x <= maxX; x++) {
+    const pairs: Array<{ from: GridCell; to: GridCell }> = [];
+    for (let y = 0; y <= maxY; y++) {
+      const left = grid[`${x - 1},${y}`];
+      const right = grid[`${x},${y}`];
+      if (!left || !right || left.type === "disabled" || right.type === "disabled") continue;
+      pairs.push({ from: left, to: right });
     }
-  });
+    buildRoadLine("vertical", x - 1, pairs);
+  }
+
+  for (let y = 1; y <= maxY; y++) {
+    const pairs: Array<{ from: GridCell; to: GridCell }> = [];
+    for (let x = 0; x <= maxX; x++) {
+      const top = grid[`${x},${y - 1}`];
+      const bottom = grid[`${x},${y}`];
+      if (!top || !bottom || top.type === "disabled" || bottom.type === "disabled") continue;
+      pairs.push({ from: top, to: bottom });
+    }
+    buildRoadLine("horizontal", y - 1, pairs);
+  }
 
   return roadSegments;
 }
