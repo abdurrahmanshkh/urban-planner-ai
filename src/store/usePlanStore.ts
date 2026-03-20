@@ -1,6 +1,13 @@
 // src/store/usePlanStore.ts
 import { create } from 'zustand';
-import { placeAmenities, generateRoads, calculateEconomics } from "@/lib/algorithms";
+import {
+  placeAmenities,
+  calculateEconomics,
+  generateRoadNetwork,
+  calculateRoadAreaHectares,
+  RoadSegment,
+} from "@/lib/algorithms";
+import { IDEAL_BLOCK_SIZE_METERS } from "@/lib/planningMath";
 
 export type CellType = 'residential' | 'amenity' | 'disabled' | 'road';
 
@@ -17,41 +24,67 @@ interface PlanState {
   // Grid State
   gridSize: number;
   gridData: Record<string, GridCell>;
+  roadNetwork: Record<string, RoadSegment>;
+  roadAreaHectares: number;
   isGridLocked: boolean;
   isGenerating: boolean;
   
   // Demographics & Economics
   population: number;
   totalLandValue: number;
+  landAreaHectares: number;
+  blockSizeMeters: number;
+  computedDevelopableAreaHectares: number;
   
   // Amenities (User selected counts)
   amenities: Record<string, number>;
   
   // Actions
-  setGridData: (size: number, data: Record<string, GridCell>) => void;
+  setGridData: (size: number, data: Record<string, GridCell>, developableAreaHectares?: number) => void;
   updateCell: (cellKey: string, updates: Partial<GridCell>) => void;
   setPopulation: (pop: number) => void;
   setTotalLandValue: (val: number) => void;
+  setLandAreaHectares: (landArea: number) => void;
+  setBlockSizeMeters: (blockSize: number) => void;
   setAmenityCount: (type: string, count: number) => void;
   setGridLocked: (locked: boolean) => void;
   generateCityPlan: () => Promise<void>; // <-- UPDATED to Promise
   moveAmenity: (fromKey: string, toKey: string) => void;
+  toggleBlockAvailability: (cellKey: string) => void;
 }
 
 export const usePlanStore = create<PlanState>((set, get) => ({
   gridSize: 15,
   gridData: {},
+  roadNetwork: {},
+  roadAreaHectares: 0,
   isGridLocked: false,
   isGenerating: false, // <-- NEW
   
   population: 50000,
   totalLandValue: 500000000,
+  landAreaHectares: 320,
+  blockSizeMeters: IDEAL_BLOCK_SIZE_METERS,
+  computedDevelopableAreaHectares: 0,
   
   amenities: {
     school: 0, hospital: 0, park: 0, supermarket: 0, bus_station: 0, community_center: 0,
   },
 
-  setGridData: (size, data) => set({ gridSize: size, gridData: data }),
+  setGridData: (size, data, developableAreaHectares) => {
+    const { blockSizeMeters, landAreaHectares, population } = get();
+    const roadNetwork = generateRoadNetwork(data, population);
+    const roadAreaHectares = calculateRoadAreaHectares(roadNetwork, blockSizeMeters);
+    const inferredDevelopableArea = Math.max(0, landAreaHectares - roadAreaHectares);
+
+    set({
+      gridSize: size,
+      gridData: data,
+      roadNetwork,
+      roadAreaHectares,
+      computedDevelopableAreaHectares: Math.max(0, developableAreaHectares ?? inferredDevelopableArea),
+    });
+  },
   updateCell: (cellKey, updates) =>
     set((state) => ({
       gridData: {
@@ -61,6 +94,8 @@ export const usePlanStore = create<PlanState>((set, get) => ({
     })),
   setPopulation: (pop) => set({ population: pop }),
   setTotalLandValue: (val) => set({ totalLandValue: val }),
+  setLandAreaHectares: (landArea) => set({ landAreaHectares: landArea }),
+  setBlockSizeMeters: (blockSize) => set({ blockSizeMeters: blockSize }),
   setAmenityCount: (type, count) =>
     set((state) => ({
       amenities: { ...state.amenities, [type]: count },
@@ -73,19 +108,25 @@ export const usePlanStore = create<PlanState>((set, get) => ({
       // Simulate a complex calculation delay for UX purposes (1.5 seconds)
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      const { gridSize, gridData, amenities, totalLandValue } = get();
+      const { gridSize, gridData, amenities, totalLandValue, blockSizeMeters, landAreaHectares, population } = get();
 
       // Step 1: Constraint-based Amenity Placement
       let newGrid = placeAmenities(gridSize, gridData, amenities);
 
-      // Step 2: A* Road Routing
-      newGrid = generateRoads(gridSize, newGrid);
+      // Step 2: Dynamic road network generation between all active blocks
+      const roadNetwork = generateRoadNetwork(newGrid, population);
+      const roadAreaHectares = calculateRoadAreaHectares(roadNetwork, blockSizeMeters);
 
       // Step 3: Proportional Economics Calculation
-      newGrid = calculateEconomics(newGrid, totalLandValue);
+      newGrid = calculateEconomics(newGrid, totalLandValue, blockSizeMeters, roadNetwork);
 
       // Commit the processed grid to state
-      set({ gridData: newGrid });
+      set({
+        gridData: newGrid,
+        roadNetwork,
+        roadAreaHectares,
+        computedDevelopableAreaHectares: Math.max(0, landAreaHectares - roadAreaHectares),
+      });
     } catch (error) {
       console.error("Failed to generate city plan", error);
     } finally {
@@ -93,7 +134,7 @@ export const usePlanStore = create<PlanState>((set, get) => ({
     }
   },
   moveAmenity: (fromKey, toKey) => {
-    const { gridData, totalLandValue } = get();
+    const { gridData, totalLandValue, blockSizeMeters, landAreaHectares, population } = get();
     const fromCell = gridData[fromKey];
     const toCell = gridData[toKey];
 
@@ -112,8 +153,43 @@ export const usePlanStore = create<PlanState>((set, get) => ({
     newGrid[fromKey] = { ...fromCell, type: 'residential', amenityType: undefined };
 
     // Instantly recalculate the economics (Heatmap & Accessibility)
-    const finalizedGrid = calculateEconomics(newGrid, totalLandValue);
+    const roadNetwork = generateRoadNetwork(newGrid, population);
+    const roadAreaHectares = calculateRoadAreaHectares(roadNetwork, blockSizeMeters);
+    const finalizedGrid = calculateEconomics(newGrid, totalLandValue, blockSizeMeters, roadNetwork);
 
-    set({ gridData: finalizedGrid });
+    set({
+      gridData: finalizedGrid,
+      roadNetwork,
+      roadAreaHectares,
+      computedDevelopableAreaHectares: Math.max(0, landAreaHectares - roadAreaHectares),
+    });
+  },
+  toggleBlockAvailability: (cellKey) => {
+    const { gridData, blockSizeMeters, landAreaHectares, population } = get();
+    const target = gridData[cellKey];
+    if (!target) return;
+    if (target.type !== "residential" && target.type !== "disabled") return;
+
+    const updatedType = target.type === "disabled" ? "residential" : "disabled";
+    const newGrid = {
+      ...gridData,
+      [cellKey]: {
+        ...target,
+        type: updatedType,
+        amenityType: undefined,
+        accessibilityScore: undefined,
+        landValue: undefined,
+      },
+    };
+
+    const roadNetwork = generateRoadNetwork(newGrid, population);
+    const roadAreaHectares = calculateRoadAreaHectares(roadNetwork, blockSizeMeters);
+
+    set({
+      gridData: newGrid,
+      roadNetwork,
+      roadAreaHectares,
+      computedDevelopableAreaHectares: Math.max(0, landAreaHectares - roadAreaHectares),
+    });
   },
 }));

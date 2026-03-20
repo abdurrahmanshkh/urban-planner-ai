@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Maximize2, Download, Map, Loader2, Layers } from "lucide-react";
+import { Maximize2, Download, Loader2, Layers } from "lucide-react";
 
 import ZoningWizard from "./ZoningWizard";
 import MapProcessor from "./MapProcessor";
@@ -147,12 +147,8 @@ export default function GridVisualizer() {
                   <InteractiveGrid />
                 </div>
               ) : (
-                <div className="flex-1 flex flex-col items-center justify-center text-center">
-                  <Map className="mx-auto text-slate-300 mb-4" size={48} />
-                  <h3 className="text-xl font-bold text-slate-800 mb-2">Topography Ready</h3>
-                  <p className="text-slate-500 max-w-sm mx-auto">
-                    Configure your demographic requirements. Once locked, the algorithm will place the infrastructure here.
-                  </p>
+                <div className="flex-1 w-full h-full flex flex-col items-center justify-center bg-white">
+                  <InteractiveGrid editMode />
                 </div>
               )}
             </div>

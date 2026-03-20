@@ -1,12 +1,23 @@
 import { GridCell } from "@/store/usePlanStore";
-import { AMENITY_CONFIG } from "@/lib/planningMath";
+import { AMENITY_CONFIG, getServiceRadiusInCells } from "@/lib/planningMath";
 
 // Helper: Manhattan Distance
 const getDistance = (x1: number, y1: number, x2: number, y2: number) => {
   return Math.abs(x1 - x2) + Math.abs(y1 - y2);
 };
 
-const parseKey = (key: string): [number, number] => key.split(",").map(Number) as [number, number];
+export type RoadClass = "local" | "collector" | "arterial";
+
+export interface RoadSegment {
+  id: string;
+  lineKey: string;
+  fromKey: string;
+  toKey: string;
+  orientation: "horizontal" | "vertical";
+  laneCount: number;
+  widthMeters: number;
+  roadClass: RoadClass;
+}
 
 const getAmenitySpacingRules = (amenityType: string) => {
   switch (amenityType) {
@@ -21,6 +32,41 @@ const getAmenitySpacingRules = (amenityType: string) => {
     default:
       return { minSameTypeDistance: 3, minAnyAmenityDistance: 2 };
   }
+};
+
+const classifyRoad = (
+  demandScore: number,
+  amenitiesNearby: number,
+  populationPerCell: number
+): { roadClass: RoadClass; laneCount: number; widthMeters: number } => {
+  if (demandScore >= 18 || amenitiesNearby >= 8 || populationPerCell >= 240) {
+    return { roadClass: "arterial", laneCount: 4, widthMeters: 20 };
+  }
+  if (demandScore >= 10 || amenitiesNearby >= 4 || populationPerCell >= 140) {
+    return { roadClass: "collector", laneCount: 3, widthMeters: 14 };
+  }
+  return { roadClass: "local", laneCount: 2, widthMeters: 10 };
+};
+
+const getCellDemand = (cell?: GridCell): number => {
+  if (!cell || cell.type === "disabled") return 0;
+  if (cell.type === "amenity") {
+    switch (cell.amenityType) {
+      case "hospital":
+      case "bus_station":
+        return 3.1;
+      case "school":
+      case "supermarket":
+      case "community_center":
+        return 2.3;
+      case "park":
+        return 1.8;
+      default:
+        return 2;
+    }
+  }
+
+  return 1.2; // residential baseline
 };
 
 // 1. ZONING ALGORITHM
@@ -98,117 +144,92 @@ export function placeAmenities(
   return grid;
 }
 
-// 2. A* PATHFINDING ALGORITHM
-export function generateRoads(
-  _gridSize: number,
-  grid: Record<string, GridCell>
-): Record<string, GridCell> {
-  const updatedGrid = { ...grid };
-  const amenities = Object.values(updatedGrid).filter((c) => c.type === "amenity");
-  if (amenities.length < 2) return updatedGrid;
+export function generateRoadNetwork(grid: Record<string, GridCell>, population: number): Record<string, RoadSegment> {
+  const roadSegments: Record<string, RoadSegment> = {};
+  const cells = Object.values(grid);
+  const activeCells = cells.filter((cell) => cell.type !== "disabled");
+  if (activeCells.length === 0) return roadSegments;
 
-  const aStarPath = (startKey: string, goalKey: string): string[] => {
-    const [goalX, goalY] = parseKey(goalKey);
-    const openSet = new Set<string>([startKey]);
-    const cameFrom = new Map<string, string>();
-    const gScore = new Map<string, number>([[startKey, 0]]);
-    const fScore = new Map<string, number>([
-      [startKey, getDistance(...parseKey(startKey), goalX, goalY)],
-    ]);
+  const maxX = Math.max(...cells.map((c) => c.x));
+  const maxY = Math.max(...cells.map((c) => c.y));
+  const populationPerCell = population / activeCells.length;
 
-    let iterations = 0;
-    const MAX_ITERATIONS = 2000;
+  const buildRoadLine = (
+    orientation: "vertical" | "horizontal",
+    lineIndex: number,
+    pairs: Array<{ from: GridCell; to: GridCell }>
+  ) => {
+    if (pairs.length === 0) return;
 
-    while (openSet.size > 0 && iterations < MAX_ITERATIONS) {
-      iterations++;
-      let currentKey = "";
-      let lowestF = Number.POSITIVE_INFINITY;
-
-      for (const key of openSet) {
-        const score = fScore.get(key) ?? Number.POSITIVE_INFINITY;
-        if (score < lowestF) {
-          lowestF = score;
-          currentKey = key;
-        }
-      }
-
-      if (!currentKey) break;
-      if (currentKey === goalKey) {
-        const path: string[] = [currentKey];
-        let walk = currentKey;
-        while (cameFrom.has(walk)) {
-          walk = cameFrom.get(walk)!;
-          path.unshift(walk);
-        }
-        return path;
-      }
-
-      openSet.delete(currentKey);
-      const [cx, cy] = parseKey(currentKey);
-      const neighbors = [[cx, cy - 1], [cx, cy + 1], [cx - 1, cy], [cx + 1, cy]];
-
-      for (const [nx, ny] of neighbors) {
-        const nKey = `${nx},${ny}`;
-        const neighborCell = updatedGrid[nKey];
-        if (!neighborCell || neighborCell.type === "disabled") continue;
-
-        const existingRoadBonus = neighborCell.type === "road" ? -0.35 : 0;
-        const tentativeGScore = (gScore.get(currentKey) ?? Number.POSITIVE_INFINITY) + 1 + existingRoadBonus;
-        const currentNeighborGScore = gScore.get(nKey) ?? Number.POSITIVE_INFINITY;
-
-        if (tentativeGScore < currentNeighborGScore) {
-          cameFrom.set(nKey, currentKey);
-          gScore.set(nKey, tentativeGScore);
-          fScore.set(nKey, tentativeGScore + getDistance(nx, ny, goalX, goalY));
-          openSet.add(nKey);
-        }
-      }
-    }
-
-    return [];
-  };
-
-  const connected = new Set<string>([`${amenities[0].x},${amenities[0].y}`]);
-  const remaining = new Set<string>(amenities.slice(1).map((a) => `${a.x},${a.y}`));
-
-  while (remaining.size > 0) {
-    let bestFrom = "";
-    let bestTo = "";
-    let bestDistance = Number.POSITIVE_INFINITY;
-
-    for (const fromKey of connected) {
-      const [fx, fy] = parseKey(fromKey);
-      for (const toKey of remaining) {
-        const [tx, ty] = parseKey(toKey);
-        const dist = getDistance(fx, fy, tx, ty);
-        if (dist < bestDistance) {
-          bestDistance = dist;
-          bestFrom = fromKey;
-          bestTo = toKey;
-        }
-      }
-    }
-
-    if (!bestFrom || !bestTo) break;
-    const path = aStarPath(bestFrom, bestTo);
-    path.forEach((key) => {
-      const cell = updatedGrid[key];
-      if (cell && cell.type === "residential") {
-        updatedGrid[key] = { ...cell, type: "road" };
-      }
+    const uniqueCells = new Map<string, GridCell>();
+    pairs.forEach(({ from, to }) => {
+      uniqueCells.set(`${from.x},${from.y}`, from);
+      uniqueCells.set(`${to.x},${to.y}`, to);
     });
 
-    connected.add(bestTo);
-    remaining.delete(bestTo);
+    const amenitiesNearby = Array.from(uniqueCells.values()).filter((cell) => cell.type === "amenity").length;
+    const demandScore = Array.from(uniqueCells.values()).reduce((sum, cell) => sum + getCellDemand(cell), 0);
+    const profile = classifyRoad(demandScore, amenitiesNearby, populationPerCell);
+    const lineKey = `${orientation === "vertical" ? "V" : "H"}(${lineIndex + 1})`;
+
+    pairs.forEach(({ from, to }) => {
+      const segmentId = `${lineKey}:${from.x},${from.y}->${to.x},${to.y}`;
+      roadSegments[segmentId] = {
+        id: segmentId,
+        lineKey,
+        fromKey: `${from.x},${from.y}`,
+        toKey: `${to.x},${to.y}`,
+        orientation,
+        laneCount: profile.laneCount,
+        widthMeters: profile.widthMeters,
+        roadClass: profile.roadClass,
+      };
+    });
+  };
+
+  for (let x = 1; x <= maxX; x++) {
+    const pairs: Array<{ from: GridCell; to: GridCell }> = [];
+    for (let y = 0; y <= maxY; y++) {
+      const left = grid[`${x - 1},${y}`];
+      const right = grid[`${x},${y}`];
+      if (!left || !right || left.type === "disabled" || right.type === "disabled") continue;
+      pairs.push({ from: left, to: right });
+    }
+    buildRoadLine("vertical", x - 1, pairs);
   }
 
-  return updatedGrid;
+  for (let y = 1; y <= maxY; y++) {
+    const pairs: Array<{ from: GridCell; to: GridCell }> = [];
+    for (let x = 0; x <= maxX; x++) {
+      const top = grid[`${x},${y - 1}`];
+      const bottom = grid[`${x},${y}`];
+      if (!top || !bottom || top.type === "disabled" || bottom.type === "disabled") continue;
+      pairs.push({ from: top, to: bottom });
+    }
+    buildRoadLine("horizontal", y - 1, pairs);
+  }
+
+  return roadSegments;
+}
+
+export function calculateRoadAreaHectares(
+  roadNetwork: Record<string, RoadSegment>,
+  blockSizeMeters: number
+): number {
+  const totalRoadAreaSqm = Object.values(roadNetwork).reduce(
+    (sum, road) => sum + road.widthMeters * blockSizeMeters,
+    0
+  );
+
+  return totalRoadAreaSqm / 10_000;
 }
 
 // 3. PROPORTIONAL ECONOMICS MODEL
 export function calculateEconomics(
   grid: Record<string, GridCell>,
-  totalLandValue: number
+  totalLandValue: number,
+  blockSizeMeters: number,
+  roadNetwork: Record<string, RoadSegment>
 ): Record<string, GridCell> {
   const updatedGrid = { ...grid };
   const cells = Object.values(updatedGrid);
@@ -222,13 +243,24 @@ export function calculateEconomics(
     }
   });
 
-  const serviceRadius: Record<string, number> = {
-    hospital: 9,
-    school: 8,
-    park: 6,
-    supermarket: 6,
-    bus_station: 8,
-    community_center: 7,
+  const roadSegmentsByCell = new Map<string, RoadSegment[]>();
+  Object.values(roadNetwork).forEach((road) => {
+    const fromList = roadSegmentsByCell.get(road.fromKey) || [];
+    fromList.push(road);
+    roadSegmentsByCell.set(road.fromKey, fromList);
+
+    const toList = roadSegmentsByCell.get(road.toKey) || [];
+    toList.push(road);
+    roadSegmentsByCell.set(road.toKey, toList);
+  });
+
+  const serviceRadiusMeters: Record<string, number> = {
+    hospital: 1800,
+    school: 1200,
+    park: 800,
+    supermarket: 700,
+    bus_station: 1200,
+    community_center: 1000,
   };
 
   const serviceWeight: Record<string, number> = {
@@ -251,28 +283,24 @@ export function calculateEconomics(
       if (amenityCells.length === 0) return;
 
       const nearest = Math.min(...amenityCells.map((a) => getDistance(cell.x, cell.y, a.x, a.y)));
-      const radius = serviceRadius[amenityType] ?? 6;
+      const radius = getServiceRadiusInCells(serviceRadiusMeters[amenityType] ?? 700, blockSizeMeters);
       const weight = serviceWeight[amenityType] ?? 1;
       const contribution = Math.max(0, 1 - nearest / radius) * weight;
       accessibility += contribution;
     });
 
-    const adjacentRoadBonus = [
-      `${cell.x},${cell.y - 1}`,
-      `${cell.x},${cell.y + 1}`,
-      `${cell.x - 1},${cell.y}`,
-      `${cell.x + 1},${cell.y}`,
-    ].some((neighborKey) => updatedGrid[neighborKey]?.type === "road")
-      ? 0.4
-      : 0;
-
-    if (cell.type === "road") accessibility += 0.8;
-    else accessibility += adjacentRoadBonus;
+    const connectedRoads = roadSegmentsByCell.get(`${cell.x},${cell.y}`) || [];
+    const avgRoadWidth =
+      connectedRoads.length > 0
+        ? connectedRoads.reduce((sum, road) => sum + road.widthMeters, 0) / connectedRoads.length
+        : 0;
+    const roadAccessBonus = connectedRoads.length * 0.12 + avgRoadWidth / 50;
+    accessibility += roadAccessBonus;
 
     const normalizedAccessibility = Math.max(0, Math.min(10, accessibility));
     updatedGrid[`${cell.x},${cell.y}`] = { ...cell, accessibilityScore: Number(normalizedAccessibility.toFixed(2)) };
 
-    const zoningMultiplier = cell.type === "road" ? 0.55 : cell.type === "amenity" ? 0.85 : 1;
+    const zoningMultiplier = cell.type === "amenity" ? 0.9 : 1;
     const desirabilityWeight = Math.pow(0.35 + normalizedAccessibility, 1.35) * zoningMultiplier;
     desirabilityWeightByCell.set(`${cell.x},${cell.y}`, desirabilityWeight);
     totalWeight += desirabilityWeight;
