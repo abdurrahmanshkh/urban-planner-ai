@@ -50,6 +50,7 @@ interface PlanState {
   setGridLocked: (locked: boolean) => void;
   generateCityPlan: () => Promise<void>; // <-- UPDATED to Promise
   moveAmenity: (fromKey: string, toKey: string) => void;
+  toggleBlockAvailability: (cellKey: string) => void;
 }
 
 export const usePlanStore = create<PlanState>((set, get) => ({
@@ -158,6 +159,34 @@ export const usePlanStore = create<PlanState>((set, get) => ({
 
     set({
       gridData: finalizedGrid,
+      roadNetwork,
+      roadAreaHectares,
+      computedDevelopableAreaHectares: Math.max(0, landAreaHectares - roadAreaHectares),
+    });
+  },
+  toggleBlockAvailability: (cellKey) => {
+    const { gridData, blockSizeMeters, landAreaHectares, population } = get();
+    const target = gridData[cellKey];
+    if (!target) return;
+    if (target.type !== "residential" && target.type !== "disabled") return;
+
+    const updatedType = target.type === "disabled" ? "residential" : "disabled";
+    const newGrid = {
+      ...gridData,
+      [cellKey]: {
+        ...target,
+        type: updatedType,
+        amenityType: undefined,
+        accessibilityScore: undefined,
+        landValue: undefined,
+      },
+    };
+
+    const roadNetwork = generateRoadNetwork(newGrid, population);
+    const roadAreaHectares = calculateRoadAreaHectares(roadNetwork, blockSizeMeters);
+
+    set({
+      gridData: newGrid,
       roadNetwork,
       roadAreaHectares,
       computedDevelopableAreaHectares: Math.max(0, landAreaHectares - roadAreaHectares),

@@ -6,8 +6,8 @@ import { usePlanStore, GridCell } from "@/store/usePlanStore";
 import { AMENITY_CONFIG, getBlockAreaHectares } from "@/lib/planningMath";
 import { Map, TrendingUp } from "lucide-react";
 
-export default function InteractiveGrid() {
-  const { gridSize, gridData, moveAmenity, blockSizeMeters } = usePlanStore();
+export default function InteractiveGrid({ editMode = false }: { editMode?: boolean }) {
+  const { gridSize, gridData, moveAmenity, blockSizeMeters, toggleBlockAvailability, isGridLocked } = usePlanStore();
   const [viewMode, setViewMode] = useState<"zoning" | "heatmap">("zoning");
 
   const cells = Object.values(gridData);
@@ -34,6 +34,11 @@ export default function InteractiveGrid() {
     if (sourceKey && sourceKey !== targetKey) {
       moveAmenity(sourceKey, targetKey);
     }
+  };
+
+  const handleCellClick = (cellKey: string) => {
+    if (!editMode || isGridLocked) return;
+    toggleBlockAvailability(cellKey);
   };
 
   const getCellAppearance = (cell: GridCell) => {
@@ -74,16 +79,18 @@ export default function InteractiveGrid() {
           >
             <Map size={16} /> Zoning Map
           </button>
-          <button 
-            onClick={() => setViewMode("heatmap")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${viewMode === "heatmap" ? "bg-white shadow-sm text-red-500 border border-slate-200" : "text-slate-500 hover:bg-slate-200/50 border border-transparent"}`}
-          >
-            <TrendingUp size={16} /> Economics Heatmap
-          </button>
+          {!editMode && (
+            <button 
+              onClick={() => setViewMode("heatmap")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${viewMode === "heatmap" ? "bg-white shadow-sm text-red-500 border border-slate-200" : "text-slate-500 hover:bg-slate-200/50 border border-transparent"}`}
+            >
+              <TrendingUp size={16} /> Economics Heatmap
+            </button>
+          )}
         </div>
       </div>
 
-      <p className="text-xs text-slate-500 -mt-2 mb-3 px-1">Block gaps represent roads. Exact road IDs and lane counts are listed in the analytics panel.</p>
+      <p className="text-xs text-slate-500 -mt-2 mb-3 px-1">{editMode ? "Click any residential/blocked cell to toggle availability before generating." : "Block gaps represent roads. Exact road IDs and lane counts are listed in the analytics panel."}</p>
 
       {/* The Grid */}
       <div className="flex-1 flex items-center justify-center p-2">
@@ -94,7 +101,7 @@ export default function InteractiveGrid() {
           >
           {cells.map((cell) => {
             const cellKey = `${cell.x},${cell.y}`;
-            const isDraggable = cell.type === "amenity";
+            const isDraggable = !editMode && cell.type === "amenity";
             const appearance = getCellAppearance(cell);
             const amenityConfig = cell.amenityType ? AMENITY_CONFIG[cell.amenityType as keyof typeof AMENITY_CONFIG] : null;
 
@@ -105,8 +112,10 @@ export default function InteractiveGrid() {
                 onDragStart={(e) => handleDragStart(e, cellKey)}
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, cellKey)}
+                onClick={() => handleCellClick(cellKey)}
                 className={`relative flex items-center justify-center aspect-square transition-all border 
                   ${isDraggable ? "cursor-grab active:cursor-grabbing hover:brightness-110 shadow-sm z-10" : ""}
+                  ${editMode && !isGridLocked && (cell.type === "residential" || cell.type === "disabled") ? "cursor-pointer" : ""}
                   ${cell.type === "residential" ? "hover:bg-yellow-200/80 transition-colors" : ""}
                 `}
                 style={appearance}
@@ -117,6 +126,10 @@ export default function InteractiveGrid() {
                   <span className="text-sm md:text-xl drop-shadow-md select-none pointer-events-none">
                     {amenityConfig.icon}
                   </span>
+                )}
+
+                {editMode && cell.type === "disabled" && (
+                  <span className="text-[9px] text-slate-400 font-bold select-none">BLOCKED</span>
                 )}
                 
                 {/* Heatmap tooltip overlay */}
