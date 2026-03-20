@@ -142,7 +142,7 @@ export default function GridVisualizer() {
         pdf.text(value, x + 3, y + 10);
       });
 
-      const mapY = 122;
+      const mapY = 132;
       const mapW = 125;
       const mapH = 125 * (canvas.height / canvas.width);
       pdf.setFontSize(12);
