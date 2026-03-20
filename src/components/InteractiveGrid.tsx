@@ -87,7 +87,7 @@ export default function InteractiveGrid() {
 
       {/* The Grid */}
       <div className="flex-1 flex items-center justify-center p-2">
-        <div className="relative w-full max-w-[600px] aspect-square">
+        <div className="relative w-full aspect-square">
           <div
             className="grid gap-[2px] bg-slate-200 p-[2px] rounded-lg shadow-inner w-full h-full"
             style={{ gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))` }}
