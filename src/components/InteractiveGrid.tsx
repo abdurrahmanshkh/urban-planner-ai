@@ -129,7 +129,7 @@ export default function InteractiveGrid({ editMode = false }: { editMode?: boole
                 )}
 
                 {editMode && cell.type === "disabled" && (
-                  <span className="text-[9px] text-slate-400 font-bold select-none">BLOCKED</span>
+                  <span className="text-[9px] text-slate-400 font-bold select-none">❌</span>
                 )}
                 
                 {/* Heatmap tooltip overlay */}
