@@ -9,6 +9,8 @@ import { Map, TrendingUp } from "lucide-react";
 export default function InteractiveGrid({ editMode = false }: { editMode?: boolean }) {
   const { gridSize, gridData, moveAmenity, blockSizeMeters, toggleBlockAvailability, isGridLocked } = usePlanStore();
   const [viewMode, setViewMode] = useState<"zoning" | "heatmap">("zoning");
+  const [draggedKey, setDraggedKey] = useState<string | null>(null);
+  const [dragOverKey, setDragOverKey] = useState<string | null>(null);
 
   const cells = Object.values(gridData);
   if (cells.length === 0) return null;
@@ -19,17 +21,41 @@ export default function InteractiveGrid({ editMode = false }: { editMode?: boole
   const maxLandValue = Math.max(1, ...cells.map(c => c.landValue || 0));
 
   const handleDragStart = (e: React.DragEvent, cellKey: string) => {
+    setDraggedKey(cellKey);
     e.dataTransfer.setData("cellKey", cellKey);
     e.dataTransfer.effectAllowed = "move";
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault(); // Necessary to allow dropping
-    e.dataTransfer.dropEffect = "move";
+  const handleDragEnd = () => {
+    setDraggedKey(null);
+    setDragOverKey(null);
   };
 
-  const handleDrop = (e: React.DragEvent, targetKey: string) => {
+  const handleDragEnter = (e: React.DragEvent, cellKey: string, type: string) => {
     e.preventDefault();
+    if (draggedKey) setDragOverKey(cellKey);
+  };
+
+  const handleDragOver = (e: React.DragEvent, type: string) => {
+    e.preventDefault(); // Necessary to allow dropping
+    if (type !== "residential") {
+      e.dataTransfer.dropEffect = "none";
+    } else {
+      e.dataTransfer.dropEffect = "move";
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent, cellKey: string) => {
+    if (dragOverKey === cellKey) setDragOverKey(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, targetKey: string, type: string) => {
+    e.preventDefault();
+    setDraggedKey(null);
+    setDragOverKey(null);
+    
+    if (type !== "residential") return;
+
     const sourceKey = e.dataTransfer.getData("cellKey");
     if (sourceKey && sourceKey !== targetKey) {
       moveAmenity(sourceKey, targetKey);
@@ -110,15 +136,21 @@ export default function InteractiveGrid({ editMode = false }: { editMode?: boole
                 key={cellKey}
                 draggable={isDraggable}
                 onDragStart={(e) => handleDragStart(e, cellKey)}
-                onDragOver={handleDragOver}
-                onDrop={(e) => handleDrop(e, cellKey)}
+                onDragEnd={handleDragEnd}
+                onDragEnter={(e) => handleDragEnter(e, cellKey, cell.type)}
+                onDragOver={(e) => handleDragOver(e, cell.type)}
+                onDragLeave={(e) => handleDragLeave(e, cellKey)}
+                onDrop={(e) => handleDrop(e, cellKey, cell.type)}
                 onClick={() => handleCellClick(cellKey)}
                 className={`relative flex items-center justify-center aspect-square transition-all border 
                   ${isDraggable ? "cursor-grab active:cursor-grabbing hover:brightness-110 shadow-sm z-10" : ""}
                   ${editMode && !isGridLocked && (cell.type === "residential" || cell.type === "disabled") ? "cursor-pointer" : ""}
-                  ${cell.type === "residential" ? "hover:bg-yellow-200/80 transition-colors" : ""}
+                  ${cell.type === "residential" && !draggedKey ? "hover:bg-yellow-200/80 transition-colors" : ""}
+                  ${draggedKey === cellKey ? "opacity-40 animate-pulse outline outline-2 outline-indigo-500 scale-95" : ""}
+                  ${dragOverKey === cellKey && cell.type === "residential" ? "bg-emerald-200/80 border-emerald-500 border-2 scale-105 z-20 shadow-lg" : ""}
+                  ${dragOverKey === cellKey && cell.type !== "residential" ? "bg-red-200/80 border-red-500 border-2 z-20" : ""}
                 `}
-                style={appearance}
+                style={dragOverKey === cellKey ? {} : appearance}
                 title={cell.type === "amenity" ? amenityConfig?.name : `${cell.type.toUpperCase()} | Value: ₹${cell.landValue?.toLocaleString() || 0}`}
               >
                 {/* Icon rendering for amenities */}

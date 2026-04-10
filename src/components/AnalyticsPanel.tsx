@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Activity, IndianRupee, Users } from "lucide-react";
 import { usePlanStore } from "@/store/usePlanStore";
 import { AMENITY_CONFIG, calculateIdealAmenities, getBlockAreaHectares } from "@/lib/planningMath";
+import { calculateEnvironmentalImpact, calculateBudgetForecast, calculateTrafficLoad } from "@/lib/municipalAnalytics";
 
 export default function AnalyticsPanel() {
   const { gridData, population, gridSize, amenities, blockSizeMeters, roadAreaHectares, roadNetwork } = usePlanStore();
@@ -64,6 +65,18 @@ export default function AnalyticsPanel() {
   // Calculate ideals for the Adequacy bars
   const ideals = calculateIdealAmenities(population, gridSize);
 
+  // Advanced Municipal Analytics
+  const amenityActualCounts = Object.entries(gridData).reduce((acc, [key, cell]) => {
+    if (cell.type === "amenity" && cell.amenityType) {
+      acc[cell.amenityType] = (acc[cell.amenityType] || 0) + 1;
+    }
+    return acc;
+  }, {} as Record<string, number>);
+
+  const envImpact = calculateEnvironmentalImpact(population, amenityActualCounts['park'] || 0, blockSizeMeters);
+  const budget = calculateBudgetForecast(amenityActualCounts);
+  const traffic = calculateTrafficLoad(population, roadNetwork);
+
   // Formatter
   const formatINR = (val: number) => {
     if (val > 10000000) return `₹${(val / 10000000).toFixed(2)} Cr`;
@@ -76,7 +89,7 @@ export default function AnalyticsPanel() {
       initial={{ x: 50, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       transition={{ delay: 0.2 }}
-      className="w-full xl:w-80 bg-surface h-full border-l border-slate-200 shadow-soft overflow-y-auto"
+      className="w-full xl:w-[340px] bg-white h-full border-l border-slate-200 shadow-[rgba(0,0,0,0.05)_-10px_0px_20px_0px] overflow-y-auto relative z-20 custom-scroll"
     >
       <div className="p-6">
         <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
@@ -130,10 +143,62 @@ export default function AnalyticsPanel() {
               })}
             </div>
 
+            <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mt-8 mb-4">Advanced Municipal Modules</h4>
+            <div className="space-y-4 mb-6">
+              {/* Environmental Impact */}
+              <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="font-bold text-indigo-900">Environment & Green Cover</span>
+                  <span className={`text-xs font-bold px-2 py-1 rounded-md ${envImpact.status === 'Deficit' ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                    {envImpact.status}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm text-indigo-700">
+                  <span>Provided: {envImpact.providedSqmPerPerson.toFixed(1)} sqm/person</span>
+                  <span>Required: {envImpact.requiredSqmPerPerson} sqm</span>
+                </div>
+                <div className="mt-2 h-1.5 w-full bg-indigo-200 rounded-full overflow-hidden">
+                  <div className={`h-full transition-all duration-500 ${envImpact.status === 'Surplus' ? 'bg-emerald-500' : 'bg-red-400'}`} style={{ width: `${envImpact.score * 10}%` }}></div>
+                </div>
+              </div>
+
+              {/* Budget Forecast */}
+              <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="font-bold text-emerald-900">CapEx / OpEx Budget</span>
+                </div>
+                <div className="flex justify-between text-sm text-emerald-800 font-medium mb-1">
+                  <span>Total Capital:</span>
+                  <span>₹{budget.totalCapExCr.toFixed(1)} Cr</span>
+                </div>
+                <div className="flex justify-between text-sm text-emerald-700">
+                  <span>Yearly OpEx:</span>
+                  <span>₹{budget.totalOpExCr.toFixed(1)} Cr</span>
+                </div>
+              </div>
+
+              {/* Traffic Flow */}
+              <div className="bg-amber-50 border border-amber-100 rounded-xl p-4">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="font-bold text-amber-900">Urban Traffic Flow</span>
+                  <span className={`text-xs font-bold px-2 py-1 rounded-md ${traffic.status === 'Congested' ? 'bg-red-100 text-red-700' : traffic.status === 'Moderate' ? 'bg-amber-200 text-amber-800' : 'bg-emerald-100 text-emerald-700'}`}>
+                    {traffic.status}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm text-amber-800/80 mb-1">
+                  <span>Peak Hr Trips: {Math.round(traffic.peakHourTrips).toLocaleString()} PCU</span>
+                </div>
+                <div className="flex justify-between text-sm text-amber-800 font-medium">
+                  <span>V/C Ratio:</span>
+                  <span>{traffic.avgVCRatio.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+
             <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mt-6 mb-3">Per-Road Lane Plan</h4>
-            <div className="overflow-auto border border-slate-200 rounded-lg">
-              <table className="min-w-full text-xs">
-                <thead className="bg-slate-50 text-slate-600">
+            <div className="overflow-auto border border-slate-200 rounded-lg max-h-64 dark-scroll">
+              <table className="min-w-full text-xs ... relative">
+                <thead className="bg-slate-50 text-slate-600 sticky top-0 shadow-sm z-10">
                   <tr>
                     <th className="text-left px-3 py-2">Road</th>
                     <th className="text-left px-3 py-2">Between Blocks</th>

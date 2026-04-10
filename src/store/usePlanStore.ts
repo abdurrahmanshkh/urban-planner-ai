@@ -28,6 +28,7 @@ interface PlanState {
   roadAreaHectares: number;
   isGridLocked: boolean;
   isGenerating: boolean;
+  initMode: 'map' | 'manual' | null;
   
   // Demographics & Economics
   population: number;
@@ -51,6 +52,8 @@ interface PlanState {
   generateCityPlan: () => Promise<void>; // <-- UPDATED to Promise
   moveAmenity: (fromKey: string, toKey: string) => void;
   toggleBlockAvailability: (cellKey: string) => void;
+  setInitMode: (mode: 'map' | 'manual' | null) => void;
+  resetProject: () => void;
 }
 
 export const usePlanStore = create<PlanState>((set, get) => ({
@@ -60,6 +63,7 @@ export const usePlanStore = create<PlanState>((set, get) => ({
   roadAreaHectares: 0,
   isGridLocked: false,
   isGenerating: false, // <-- NEW
+  initMode: null,
   
   population: 50000,
   totalLandValue: 500000000,
@@ -197,4 +201,14 @@ export const usePlanStore = create<PlanState>((set, get) => ({
       computedDevelopableAreaHectares: Math.max(0, landAreaHectares - roadAreaHectares),
     });
   },
+  setInitMode: (mode) => set({ initMode: mode }),
+  resetProject: () => set({
+    gridData: {},
+    roadNetwork: {},
+    roadAreaHectares: 0,
+    isGridLocked: false,
+    computedDevelopableAreaHectares: 0,
+    initMode: null,
+    amenities: { school: 0, hospital: 0, park: 0, supermarket: 0, bus_station: 0, community_center: 0 },
+  }),
 }));
