@@ -5,7 +5,7 @@ import { MIN_BLOCK_SIZE_METERS, MAX_BLOCK_SIZE_METERS, IDEAL_BLOCK_SIZE_METERS, 
 import { useState } from "react";
 
 export default function ManualGridBuilder() {
-  const { setGridData, blockSizeMeters, setBlockSizeMeters, setLandAreaHectares } = usePlanStore();
+  const { setGridData, blockSizeMeters, setBlockSizeMeters, setLandAreaHectares, setInitMode } = usePlanStore();
   const [size, setSize] = useState(15);
 
   const calculateArea = (gridSize: number, blockMeters: number) => {
@@ -22,6 +22,7 @@ export default function ManualGridBuilder() {
     const computedArea = calculateArea(size, blockSizeMeters);
     setLandAreaHectares(Math.round(computedArea));
     setGridData(size, newGrid, computedArea);
+    setInitMode('manual');
   };
 
   return (

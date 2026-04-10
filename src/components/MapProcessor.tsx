@@ -14,6 +14,7 @@ export default function MapProcessor() {
   const setGridData = usePlanStore((state) => state.setGridData);
   const landAreaHectares = usePlanStore((state) => state.landAreaHectares);
   const blockSizeMeters = usePlanStore((state) => state.blockSizeMeters);
+  const setInitMode = usePlanStore((state) => state.setInitMode);
 
   const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -247,6 +248,7 @@ export default function MapProcessor() {
 
       // Save to global state
       setGridData(resolution, newGridData);
+      setInitMode('map');
       } catch (error) {
         console.error("Failed to extract grid from uploaded image", error);
       } finally {
