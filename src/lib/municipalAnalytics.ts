@@ -7,7 +7,7 @@ import {
   PEAK_HOUR_TRAFFIC_RATIO,
   getBlockAreaSqm
 } from "./planningMath";
-import type { RoadSegment } from "@/store/usePlanStore";
+import type { RoadSegment } from "@/lib/algorithms";
 
 export function calculateEnvironmentalImpact(
   population: number, 
