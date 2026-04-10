@@ -1,8 +1,8 @@
 import { AMENITY_CONFIG } from "@/lib/planningMath";
-import { 
-  calculateEnvironmentalImpact, 
-  calculateBudgetForecast, 
-  calculateTrafficLoad 
+import {
+  calculateEnvironmentalImpact,
+  calculateBudgetForecast,
+  calculateTrafficLoad
 } from "@/lib/municipalAnalytics";
 
 export interface PDFExportData {
@@ -233,7 +233,7 @@ export const generatePDFReport = async (data: PDFExportData) => {
     p3Y += 6;
     pdf.text(`Estimated Annual OpEx: INR ${budget.totalOpExCr.toFixed(2)} Crores`, margin, p3Y);
     p3Y += 10;
-    
+
     pdf.setFontSize(9);
     pdf.setFillColor(241, 245, 249);
     pdf.rect(margin, p3Y - 5, pdfWidth - margin * 2, 7, "F");

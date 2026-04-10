@@ -36,16 +36,18 @@ export function calculateBudgetForecast(amenityActualCounts: Record<string, numb
   let totalCapExCr = 0;
   let totalOpExCr = 0;
   
-  const amenityBreakdown = Object.entries(amenityActualCounts).map(([id, count]) => {
+  const amenityBreakdown: Array<{name: string, count: number, capexCr: number, opexCr: number}> = [];
+  
+  Object.entries(amenityActualCounts).forEach(([id, count]) => {
     const config = AMENITY_CONFIG[id as keyof typeof AMENITY_CONFIG];
-    if (!config) return null;
+    if (!config) return;
     const itemCapEx = (config.capexCr || 0) * count;
     const itemOpEx = (config.opexCr || 0) * count;
     totalCapExCr += itemCapEx;
     totalOpExCr += itemOpEx;
     
-    return { name: config.name, count, capexCr: itemCapEx, opexCr: itemOpEx };
-  }).filter(Boolean);
+    amenityBreakdown.push({ name: config.name, count, capexCr: itemCapEx, opexCr: itemOpEx });
+  });
 
   return {
     totalCapExCr,
