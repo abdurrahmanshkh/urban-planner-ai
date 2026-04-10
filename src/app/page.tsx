@@ -1,4 +1,5 @@
 "use client";
+import Sidebar from "@/components/Sidebar";
 import AnalyticsPanel from "@/components/AnalyticsPanel";
 import dynamic from "next/dynamic";
 
@@ -8,12 +9,19 @@ export default function Home() {
   });
   
   return (
-    <main className="flex min-h-screen w-full flex-col bg-background xl:h-screen xl:flex-row xl:overflow-hidden">
-      {/* Main Interactive Visualizer */}
-      <GridVisualizer />
+    <main className="flex h-screen w-full bg-slate-100 overflow-hidden relative">
+      {/* Left Sidebar */}
+      <div className="hidden md:block shrink-0">
+        <Sidebar />
+      </div>
 
-      {/* Right Analytics Panel (Hidden on smaller screens, stacked on mid screens, side-by-side on xl) */}
-      <div className="hidden xl:block xl:h-full">
+      {/* Main Interactive Visualizer */}
+      <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden relative z-10">
+        <GridVisualizer />
+      </div>
+
+      {/* Right Analytics Panel */}
+      <div className="hidden xl:block h-full shrink-0 z-20">
         <AnalyticsPanel />
       </div>
     </main>

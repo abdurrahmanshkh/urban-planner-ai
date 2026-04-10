@@ -9,6 +9,8 @@ import { Map, TrendingUp } from "lucide-react";
 export default function InteractiveGrid({ editMode = false }: { editMode?: boolean }) {
   const { gridSize, gridData, moveAmenity, blockSizeMeters, toggleBlockAvailability, isGridLocked } = usePlanStore();
   const [viewMode, setViewMode] = useState<"zoning" | "heatmap">("zoning");
+  const [draggedKey, setDraggedKey] = useState<string | null>(null);
+  const [dragOverKey, setDragOverKey] = useState<string | null>(null);
 
   const cells = Object.values(gridData);
   if (cells.length === 0) return null;
@@ -19,17 +21,41 @@ export default function InteractiveGrid({ editMode = false }: { editMode?: boole
   const maxLandValue = Math.max(1, ...cells.map(c => c.landValue || 0));
 
   const handleDragStart = (e: React.DragEvent, cellKey: string) => {
+    setDraggedKey(cellKey);
     e.dataTransfer.setData("cellKey", cellKey);
     e.dataTransfer.effectAllowed = "move";
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault(); // Necessary to allow dropping
-    e.dataTransfer.dropEffect = "move";
+  const handleDragEnd = () => {
+    setDraggedKey(null);
+    setDragOverKey(null);
   };
 
-  const handleDrop = (e: React.DragEvent, targetKey: string) => {
+  const handleDragEnter = (e: React.DragEvent, cellKey: string, type: string) => {
     e.preventDefault();
+    if (draggedKey) setDragOverKey(cellKey);
+  };
+
+  const handleDragOver = (e: React.DragEvent, type: string) => {
+    e.preventDefault(); // Necessary to allow dropping
+    if (type !== "residential") {
+      e.dataTransfer.dropEffect = "none";
+    } else {
+      e.dataTransfer.dropEffect = "move";
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent, cellKey: string) => {
+    if (dragOverKey === cellKey) setDragOverKey(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, targetKey: string, type: string) => {
+    e.preventDefault();
+    setDraggedKey(null);
+    setDragOverKey(null);
+
+    if (type !== "residential") return;
+
     const sourceKey = e.dataTransfer.getData("cellKey");
     if (sourceKey && sourceKey !== targetKey) {
       moveAmenity(sourceKey, targetKey);
@@ -55,12 +81,12 @@ export default function InteractiveGrid({ editMode = false }: { editMode?: boole
     // Zoning Mode
     if (cell.type === "disabled") return { backgroundColor: "#f1f5f9", borderColor: "#e2e8f0" };
     if (cell.type === "residential") return { backgroundColor: "#fef08a", borderColor: "#fde047" }; // Yellow for residential
-    
+
     if (cell.type === "amenity" && cell.amenityType) {
       const config = AMENITY_CONFIG[cell.amenityType as keyof typeof AMENITY_CONFIG];
       return { backgroundColor: config?.color || "#cbd5e1", borderColor: "rgba(0,0,0,0.1)", color: "white" };
     }
-    
+
     return { backgroundColor: "#ffffff", borderColor: "#e2e8f0" };
   };
 
@@ -73,14 +99,14 @@ export default function InteractiveGrid({ editMode = false }: { editMode?: boole
           {gridSize}×{gridSize} | ~{modeledAreaHectares.toFixed(1)} ha | {blockSizeMeters}m blocks
         </span>
         <div className="flex gap-2">
-          <button 
+          <button
             onClick={() => setViewMode("zoning")}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${viewMode === "zoning" ? "bg-white shadow-sm text-primary border border-slate-200" : "text-slate-500 hover:bg-slate-200/50 border border-transparent"}`}
           >
             <Map size={16} /> Zoning Map
           </button>
           {!editMode && (
-            <button 
+            <button
               onClick={() => setViewMode("heatmap")}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${viewMode === "heatmap" ? "bg-white shadow-sm text-red-500 border border-slate-200" : "text-slate-500 hover:bg-slate-200/50 border border-transparent"}`}
             >
@@ -99,48 +125,54 @@ export default function InteractiveGrid({ editMode = false }: { editMode?: boole
             className="grid gap-0.5 bg-slate-200 p-[2px] rounded-lg shadow-inner w-full h-full"
             style={{ gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))` }}
           >
-          {cells.map((cell) => {
-            const cellKey = `${cell.x},${cell.y}`;
-            const isDraggable = !editMode && cell.type === "amenity";
-            const appearance = getCellAppearance(cell);
-            const amenityConfig = cell.amenityType ? AMENITY_CONFIG[cell.amenityType as keyof typeof AMENITY_CONFIG] : null;
+            {cells.map((cell) => {
+              const cellKey = `${cell.x},${cell.y}`;
+              const isDraggable = !editMode && cell.type === "amenity";
+              const appearance = getCellAppearance(cell);
+              const amenityConfig = cell.amenityType ? AMENITY_CONFIG[cell.amenityType as keyof typeof AMENITY_CONFIG] : null;
 
-            return (
-              <div
-                key={cellKey}
-                draggable={isDraggable}
-                onDragStart={(e) => handleDragStart(e, cellKey)}
-                onDragOver={handleDragOver}
-                onDrop={(e) => handleDrop(e, cellKey)}
-                onClick={() => handleCellClick(cellKey)}
-                className={`relative flex items-center justify-center aspect-square transition-all border 
+              return (
+                <div
+                  key={cellKey}
+                  draggable={isDraggable}
+                  onDragStart={(e) => handleDragStart(e, cellKey)}
+                  onDragEnd={handleDragEnd}
+                  onDragEnter={(e) => handleDragEnter(e, cellKey, cell.type)}
+                  onDragOver={(e) => handleDragOver(e, cell.type)}
+                  onDragLeave={(e) => handleDragLeave(e, cellKey)}
+                  onDrop={(e) => handleDrop(e, cellKey, cell.type)}
+                  onClick={() => handleCellClick(cellKey)}
+                  className={`relative flex items-center justify-center aspect-square transition-all border 
                   ${isDraggable ? "cursor-grab active:cursor-grabbing hover:brightness-110 shadow-sm z-10" : ""}
                   ${editMode && !isGridLocked && (cell.type === "residential" || cell.type === "disabled") ? "cursor-pointer" : ""}
-                  ${cell.type === "residential" ? "hover:bg-yellow-200/80 transition-colors" : ""}
+                  ${cell.type === "residential" && !draggedKey ? "hover:bg-yellow-200/80 transition-colors" : ""}
+                  ${draggedKey === cellKey ? "opacity-40 animate-pulse outline outline-2 outline-indigo-500 scale-95" : ""}
+                  ${dragOverKey === cellKey && cell.type === "residential" ? "bg-emerald-200/80 border-emerald-500 border-2 scale-105 z-20 shadow-lg" : ""}
+                  ${dragOverKey === cellKey && cell.type !== "residential" ? "bg-red-200/80 border-red-500 border-2 z-20" : ""}
                 `}
-                style={appearance}
-                title={cell.type === "amenity" ? amenityConfig?.name : `${cell.type.toUpperCase()} | Value: ₹${cell.landValue?.toLocaleString() || 0}`}
-              >
-                {/* Icon rendering for amenities */}
-                {viewMode === "zoning" && cell.type === "amenity" && amenityConfig && (
-                  <span className="text-sm md:text-xl drop-shadow-md select-none pointer-events-none">
-                    {amenityConfig.icon}
-                  </span>
-                )}
+                  style={dragOverKey === cellKey ? {} : appearance}
+                  title={cell.type === "amenity" ? amenityConfig?.name : `${cell.type.toUpperCase()} | Value: ₹${cell.landValue?.toLocaleString() || 0}`}
+                >
+                  {/* Icon rendering for amenities */}
+                  {viewMode === "zoning" && cell.type === "amenity" && amenityConfig && (
+                    <span className="text-sm md:text-xl drop-shadow-md select-none pointer-events-none">
+                      {amenityConfig.icon}
+                    </span>
+                  )}
 
-                {editMode && cell.type === "disabled" && (
-                  <span className="text-[9px] text-slate-400 font-bold select-none">❌</span>
-                )}
-                
-                {/* Heatmap tooltip overlay */}
-                {viewMode === "heatmap" && cell.type !== "disabled" && (
-                  <span className="text-[8px] md:text-[10px] font-bold text-slate-900/50 select-none pointer-events-none">
-                    {(cell.accessibilityScore || 0).toFixed(1)}
-                  </span>
-                )}
-              </div>
-            );
-          })}
+                  {editMode && cell.type === "disabled" && (
+                    <span className="text-[9px] text-slate-400 font-bold select-none">❌</span>
+                  )}
+
+                  {/* Heatmap tooltip overlay */}
+                  {viewMode === "heatmap" && cell.type !== "disabled" && (
+                    <span className="text-[8px] md:text-[10px] font-bold text-slate-900/50 select-none pointer-events-none">
+                      {(cell.accessibilityScore || 0).toFixed(1)}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>

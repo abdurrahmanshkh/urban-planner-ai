@@ -7,7 +7,7 @@ import {
   calculateRoadAreaHectares,
   RoadSegment,
 } from "@/lib/algorithms";
-import { IDEAL_BLOCK_SIZE_METERS } from "@/lib/planningMath";
+import { IDEAL_BLOCK_SIZE_METERS, TARGET_MAX_PEOPLE_PER_HECTARE } from "@/lib/planningMath";
 
 export type CellType = 'residential' | 'amenity' | 'disabled' | 'road';
 
@@ -28,6 +28,7 @@ interface PlanState {
   roadAreaHectares: number;
   isGridLocked: boolean;
   isGenerating: boolean;
+  initMode: 'map' | 'manual' | null;
   
   // Demographics & Economics
   population: number;
@@ -51,6 +52,8 @@ interface PlanState {
   generateCityPlan: () => Promise<void>; // <-- UPDATED to Promise
   moveAmenity: (fromKey: string, toKey: string) => void;
   toggleBlockAvailability: (cellKey: string) => void;
+  setInitMode: (mode: 'map' | 'manual' | null) => void;
+  resetProject: () => void;
 }
 
 export const usePlanStore = create<PlanState>((set, get) => ({
@@ -60,6 +63,7 @@ export const usePlanStore = create<PlanState>((set, get) => ({
   roadAreaHectares: 0,
   isGridLocked: false,
   isGenerating: false, // <-- NEW
+  initMode: null,
   
   population: 50000,
   totalLandValue: 500000000,
@@ -72,17 +76,26 @@ export const usePlanStore = create<PlanState>((set, get) => ({
   },
 
   setGridData: (size, data, developableAreaHectares) => {
-    const { blockSizeMeters, landAreaHectares, population } = get();
-    const roadNetwork = generateRoadNetwork(data, population);
+    const { blockSizeMeters, landAreaHectares } = get();
+    
+    // Calculate a safe default population based on estimated developable area
+    const estimatedDevelopable = developableAreaHectares ?? (landAreaHectares * 0.7);
+    const idealPop = Math.round(estimatedDevelopable * TARGET_MAX_PEOPLE_PER_HECTARE * 0.8) || 1000;
+
+    const roadNetwork = generateRoadNetwork(data, idealPop);
     const roadAreaHectares = calculateRoadAreaHectares(roadNetwork, blockSizeMeters);
     const inferredDevelopableArea = Math.max(0, landAreaHectares - roadAreaHectares);
+    const finalDevelopable = Math.max(0, developableAreaHectares ?? inferredDevelopableArea);
+    const finalPop = Math.round(finalDevelopable * TARGET_MAX_PEOPLE_PER_HECTARE * 0.8) || 1000;
 
     set({
       gridSize: size,
       gridData: data,
       roadNetwork,
       roadAreaHectares,
-      computedDevelopableAreaHectares: Math.max(0, developableAreaHectares ?? inferredDevelopableArea),
+      computedDevelopableAreaHectares: finalDevelopable,
+      population: finalPop,
+      totalLandValue: Math.round(finalDevelopable * 20000000) // ₹2Cr per hectare default
     });
   },
   updateCell: (cellKey, updates) =>
@@ -197,4 +210,14 @@ export const usePlanStore = create<PlanState>((set, get) => ({
       computedDevelopableAreaHectares: Math.max(0, landAreaHectares - roadAreaHectares),
     });
   },
+  setInitMode: (mode) => set({ initMode: mode }),
+  resetProject: () => set({
+    gridData: {},
+    roadNetwork: {},
+    roadAreaHectares: 0,
+    isGridLocked: false,
+    computedDevelopableAreaHectares: 0,
+    initMode: null,
+    amenities: { school: 0, hospital: 0, park: 0, supermarket: 0, bus_station: 0, community_center: 0 },
+  }),
 }));

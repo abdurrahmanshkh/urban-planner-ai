@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Users, IndianRupee, ShieldCheck, AlertTriangle } from "lucide-react";
+import Tooltip from "./ui/Tooltip";
 import { usePlanStore } from "@/store/usePlanStore";
 import {
   AMENITY_CONFIG,
@@ -62,11 +63,13 @@ export default function ZoningWizard() {
       </div>
 
       {/* BUG FIX: Added min-h-0 to allow flex scrolling */}
-      <div className="space-y-6 flex-1 overflow-y-auto pr-2 min-h-0 pb-4">
+      <div className="space-y-6 flex-1 overflow-y-auto pr-2 min-h-0 pb-4 custom-scroll">
         <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
-            <Users size={16} className="text-slate-400" /> Expected Population
-          </label>
+          <Tooltip content="The target demographic size for this development. Cannot exceed maximum density constraints." position="top">
+            <label className="block w-max text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2 cursor-help">
+              <Users size={16} className="text-slate-400" /> Expected Population
+            </label>
+          </Tooltip>
           <input
             type="number"
             min="1000"
@@ -87,7 +90,9 @@ export default function ZoningWizard() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-2">Total Land Area (hectares)</label>
+            <Tooltip content="Calculated or manual bounds of the municipality in hectares. Validates limits." position="top">
+              <label className="block w-max text-sm font-semibold text-slate-700 mb-2 cursor-help">Total Land Area (ha)</label>
+            </Tooltip>
             <input
               type="number"
               min="1"
@@ -101,7 +106,9 @@ export default function ZoningWizard() {
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-2">Block Size (meters)</label>
+            <Tooltip content={`Length of one side of a generic city block.\nRecommended: ${IDEAL_BLOCK_SIZE_METERS}m for walkability.\nMax: ${MAX_BLOCK_SIZE_METERS}m`} position="top">
+              <label className="block w-max text-sm font-semibold text-slate-700 mb-2 cursor-help">Block Size (meters)</label>
+            </Tooltip>
             <input
               type="number"
               min={MIN_BLOCK_SIZE_METERS}
@@ -120,9 +127,11 @@ export default function ZoningWizard() {
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
-            <IndianRupee size={16} className="text-slate-400" /> Total Base Land Value (₹)
-          </label>
+          <Tooltip content="Current total baseline land value. Determines plot-level algorithmic valuation." position="top">
+            <label className="block w-max text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2 cursor-help">
+              <IndianRupee size={16} className="text-slate-400" /> Total Base Land Value (₹)
+            </label>
+          </Tooltip>
           <input
             type="number"
             min="1000000"
@@ -138,7 +147,9 @@ export default function ZoningWizard() {
         <hr className="border-slate-100" />
 
         <div>
-          <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4">Infrastructure Requirements</h3>
+          <Tooltip content="The minimum count of civic amenities needed based on the URDPFI guidelines for the set population." position="top">
+            <h3 className="text-sm w-max font-bold text-slate-800 uppercase tracking-wider mb-4 cursor-help">Infrastructure Requirements</h3>
+          </Tooltip>
           <div className="space-y-5">
             {Object.values(AMENITY_CONFIG).map((amenity) => {
               const ideal = idealAmenities[amenity.id] || 0;
