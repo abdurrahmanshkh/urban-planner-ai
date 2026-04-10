@@ -1,13 +1,10 @@
 // src/components/Sidebar.tsx
 "use client";
 
-import { motion } from "framer-motion";
-import { LayoutDashboard, Map, Settings, SlidersHorizontal, Layers, CheckCircle2 } from "lucide-react";
 import { usePlanStore } from "@/store/usePlanStore";
-import Tooltip from "./ui/Tooltip";
 
 export default function Sidebar() {
-  const { gridData, isGenerating } = usePlanStore();
+  const { gridData, isGenerating, generateCityPlan, initMode } = usePlanStore();
   const hasGridData = Object.keys(gridData).length > 0;
   const hasGeneratedPlan = Object.values(gridData).some((c) => c.type === "amenity");
 
@@ -16,66 +13,88 @@ export default function Sidebar() {
   if (hasGridData) currentStep = 2;
   if (hasGeneratedPlan) currentStep = 3;
 
+  const handleGenerate = async () => {
+    if (!hasGridData || isGenerating) return;
+    await generateCityPlan();
+  };
+
   return (
-    <motion.aside 
-      initial={{ x: -20, opacity: 0 }}
-      animate={{ x: 0, opacity: 1 }}
-      className="w-20 glass-panel-dark h-full flex flex-col items-center relative text-slate-100 py-6"
-    >
-      <div className="mb-6 flex flex-col items-center">
-        <Tooltip content="UrbanPlan AI" position="right">
-          <div className="bg-primary/20 p-2.5 rounded-xl border border-primary/30 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
-            <Layers className="text-primary-light" fill="currentColor" size={28} />
+    <aside className="fixed left-0 top-0 h-full flex flex-col p-4 bg-slate-100 w-64 hidden lg:flex border-r-0 pt-20 z-40">
+      <div className="mb-8 px-2">
+        <div className="flex items-center gap-3 mb-1">
+          <div className="p-2 bg-primary rounded-lg text-white flex items-center justify-center">
+            <span className="material-symbols-outlined">location_city</span>
           </div>
-        </Tooltip>
+          <div>
+            <h2 className="text-lg font-bold text-slate-900 leading-none">City of Metropol</h2>
+            <p className="text-[10px] text-slate-500 mt-1 uppercase tracking-wider font-semibold">Urban Planning Dept</p>
+          </div>
+        </div>
       </div>
 
-      <nav className="flex-1 w-full space-y-4 overflow-y-auto dark-scroll flex flex-col items-center mt-4">
+      <nav className="flex-1 space-y-1 font-headline text-sm font-medium">
         <NavItem 
-          icon={<Map size={22} />} 
-          label="Topography Importer" 
+          icon="dashboard" 
+          label="Dashboard" 
           active={currentStep === 1}
-          completed={currentStep > 1}
         />
         <NavItem 
-          icon={<SlidersHorizontal size={22} />} 
-          label="Zoning Parameters" 
+          icon="architecture" 
+          label="Zoning Wizard" 
           active={currentStep === 2}
-          completed={currentStep > 2}
         />
         <NavItem 
-          icon={<LayoutDashboard size={22} />} 
-          label="Analytics & Reports" 
+          icon="grid_view" 
+          label="Grid Visualizer" 
           active={currentStep === 3}
-          completed={false}
+        />
+        <NavItem 
+          icon="analytics" 
+          label="Analytics" 
+          active={currentStep > 1}
+        />
+        <NavItem 
+          icon="inventory_2" 
+          label="Project Archive" 
+          active={false}
         />
       </nav>
 
-      <div className="w-full mt-auto flex justify-center">
-        <Tooltip content="Project Settings" position="right">
-          <button className="flex items-center justify-center p-3 rounded-xl transition-all border bg-slate-800/60 hover:bg-slate-700/80 text-slate-300 hover:text-white border-slate-700/50 shadow-inner">
-            <Settings size={22} />
+      <div className="mt-auto space-y-1 pt-4 border-t border-slate-200">
+        {(initMode === 'manual' || initMode === 'map') && hasGridData && (
+          <button 
+            onClick={handleGenerate}
+            disabled={isGenerating}
+            className={`w-full bg-gradient-to-br from-primary to-primary-container text-white py-3 rounded-lg font-semibold text-sm mb-4 flex items-center justify-center gap-2 shadow-lg shadow-primary/20 transition-all ${isGenerating ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90 active:scale-95'}`}
+          >
+            {isGenerating ? (
+              <span className="material-symbols-outlined text-sm animate-spin">refresh</span>
+            ) : (
+              <span className="material-symbols-outlined text-sm">bolt</span>
+            )}
+            {isGenerating ? "Generating..." : "Generate Plan"}
           </button>
-        </Tooltip>
+        )}
+        <a className="flex items-center gap-3 px-3 py-2.5 text-slate-600 hover:bg-slate-200 rounded-lg transition-all text-sm font-medium" href="#">
+          <span className="material-symbols-outlined text-[20px]">help</span> Support
+        </a>
+        <a className="flex items-center gap-3 px-3 py-2.5 text-slate-600 hover:bg-slate-200 rounded-lg transition-all text-sm font-medium" href="#">
+          <span className="material-symbols-outlined text-[20px]">logout</span> Sign Out
+        </a>
       </div>
-    </motion.aside>
+    </aside>
   );
 }
 
-function NavItem({ icon, label, active = false, completed = false }: { icon: React.ReactNode, label: string, active?: boolean, completed?: boolean }) {
+function NavItem({ icon, label, active = false }: { icon: string, label: string, active?: boolean }) {
   return (
-    <Tooltip content={label} position="right">
-      <button className={`flex items-center justify-center p-3 rounded-xl transition-all border ${
-        active 
-          ? "bg-primary/20 border-primary/30 text-white shadow-[0_0_15px_rgba(99,102,241,0.1)]" 
-          : completed
-            ? "bg-transparent border-transparent text-slate-400 hover:bg-slate-800/40"
-            : "bg-transparent border-transparent text-slate-500 hover:bg-slate-800/40"
-      }`}>
-        <div className={`relative ${active ? "text-primary-light" : completed ? "text-success" : ""}`}>
-          {completed ? <CheckCircle2 size={22} /> : icon}
-        </div>
-      </button>
-    </Tooltip>
+    <a href="#" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
+      active 
+        ? "bg-white text-primary border border-slate-200/60 shadow-sm font-semibold" 
+        : "bg-transparent text-slate-600 hover:bg-slate-200/70"
+    }`}>
+      <span className="material-symbols-outlined text-[20px]">{icon}</span>
+      <span>{label}</span>
+    </a>
   );
 }

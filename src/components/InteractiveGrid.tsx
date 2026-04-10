@@ -91,38 +91,28 @@ export default function InteractiveGrid({ editMode = false }: { editMode?: boole
   };
 
   return (
-    <div className="flex flex-col h-full w-full overflow-auto">
-      {/* View Toggle Controls */}
-      <div className="flex justify-between items-center mb-4 bg-slate-50 p-2 rounded-xl border border-slate-200">
-        <span className="text-sm font-bold text-slate-600 px-2 uppercase tracking-wide">Visualization</span>
-        <span className="text-xs text-slate-500">
-          {gridSize}×{gridSize} | ~{modeledAreaHectares.toFixed(1)} ha | {blockSizeMeters}m blocks
-        </span>
-        <div className="flex gap-2">
+    <div className="flex flex-col h-full w-full relative z-10 w-full">
+      <div className="flex-1 flex items-center justify-center p-2 relative h-full w-full">
+        <div className="absolute top-6 left-1/2 -translate-x-1/2 flex items-center bg-white/90 backdrop-blur-md rounded-full shadow-xl shadow-slate-200/50 p-1.5 border border-white/50 z-30 pointer-events-auto">
           <button
             onClick={() => setViewMode("zoning")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${viewMode === "zoning" ? "bg-white shadow-sm text-primary border border-slate-200" : "text-slate-500 hover:bg-slate-200/50 border border-transparent"}`}
+            className={`px-6 py-2 rounded-full text-sm font-semibold transition-colors ${viewMode === "zoning" ? "bg-primary text-white shadow-md" : "text-slate-500 hover:bg-slate-100"}`}
           >
-            <Map size={16} /> Zoning Map
+            Zoning Map
           </button>
           {!editMode && (
             <button
               onClick={() => setViewMode("heatmap")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${viewMode === "heatmap" ? "bg-white shadow-sm text-red-500 border border-slate-200" : "text-slate-500 hover:bg-slate-200/50 border border-transparent"}`}
+              className={`px-6 py-2 rounded-full text-sm font-semibold transition-colors ${viewMode === "heatmap" ? "bg-error text-white shadow-md" : "text-slate-500 hover:bg-slate-100"}`}
             >
-              <TrendingUp size={16} /> Economics Heatmap
+              Economics Heatmap
             </button>
           )}
         </div>
-      </div>
 
-      <p className="text-xs text-slate-500 -mt-2 mb-3 px-1">{editMode ? "Click any residential/blocked cell to toggle availability before generating." : "Block gaps represent roads. Exact road IDs and lane counts are listed in the analytics panel."}</p>
-
-      {/* The Grid */}
-      <div className="flex-1 flex items-center justify-center p-2">
-        <div className="relative w-full aspect-square">
+        <div className="relative w-full max-w-3xl aspect-square z-10 pointer-events-auto">
           <div
-            className="grid gap-0.5 bg-slate-200 p-[2px] rounded-lg shadow-inner w-full h-full"
+            className="grid gap-0 bg-slate-200 p-0 rounded-lg shadow-inner w-full h-full"
             style={{ gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))` }}
           >
             {cells.map((cell) => {
@@ -142,20 +132,19 @@ export default function InteractiveGrid({ editMode = false }: { editMode?: boole
                   onDragLeave={(e) => handleDragLeave(e, cellKey)}
                   onDrop={(e) => handleDrop(e, cellKey, cell.type)}
                   onClick={() => handleCellClick(cellKey)}
-                  className={`relative flex items-center justify-center aspect-square transition-all border 
-                  ${isDraggable ? "cursor-grab active:cursor-grabbing hover:brightness-110 shadow-sm z-10" : ""}
+                  className={`relative flex items-center justify-center aspect-square transition-colors
+                  ${isDraggable ? "cursor-grab active:cursor-grabbing shadow-sm z-20" : ""}
                   ${editMode && !isGridLocked && (cell.type === "residential" || cell.type === "disabled") ? "cursor-pointer" : ""}
-                  ${cell.type === "residential" && !draggedKey ? "hover:bg-yellow-200/80 transition-colors" : ""}
-                  ${draggedKey === cellKey ? "opacity-40 animate-pulse outline outline-2 outline-indigo-500 scale-95" : ""}
-                  ${dragOverKey === cellKey && cell.type === "residential" ? "bg-emerald-200/80 border-emerald-500 border-2 scale-105 z-20 shadow-lg" : ""}
-                  ${dragOverKey === cellKey && cell.type !== "residential" ? "bg-red-200/80 border-red-500 border-2 z-20" : ""}
+                  ${draggedKey === cellKey ? "opacity-40" : ""}
+                  ${dragOverKey === cellKey && cell.type === "residential" ? "bg-secondary-fixed/80 scale-105 z-30 shadow-lg" : ""}
+                  ${dragOverKey === cellKey && cell.type !== "residential" ? "bg-error-container/80 z-30" : ""}
                 `}
                   style={dragOverKey === cellKey ? {} : appearance}
                   title={cell.type === "amenity" ? amenityConfig?.name : `${cell.type.toUpperCase()} | Value: ₹${cell.landValue?.toLocaleString() || 0}`}
                 >
                   {/* Icon rendering for amenities */}
                   {viewMode === "zoning" && cell.type === "amenity" && amenityConfig && (
-                    <span className="text-sm md:text-xl drop-shadow-md select-none pointer-events-none">
+                    <span className="text-[10px] md:text-xl drop-shadow-md select-none pointer-events-none">
                       {amenityConfig.icon}
                     </span>
                   )}
@@ -175,6 +164,12 @@ export default function InteractiveGrid({ editMode = false }: { editMode?: boole
             })}
           </div>
         </div>
+
+        {editMode && (
+          <p className="absolute bottom-6 left-1/2 -translate-x-1/2 text-xs text-slate-500 font-semibold bg-white/80 px-4 py-2 rounded-full shadow-sm z-30">
+            Click any residential/blocked cell to toggle availability
+          </p>
+        )}
       </div>
     </div>
   );

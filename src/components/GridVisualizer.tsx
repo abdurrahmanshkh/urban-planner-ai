@@ -105,84 +105,50 @@ export default function GridVisualizer() {
       setIsExporting(false);
     }
   };
+  
+  if (!hasGridData) return null;
 
   return (
     <motion.div
-      initial={{ y: 20, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      className="flex-1 min-h-0 p-4 md:p-6 flex flex-col relative overflow-y-auto"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="w-full h-full rounded-2xl overflow-hidden relative shadow-inner bg-slate-200"
     >
-      <div className="flex flex-wrap justify-between items-center gap-3 mb-4 md:mb-6">
-        <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1 text-indigo-700 mb-2">
-            <Layers size={14} />
-            <span className="text-xs font-semibold tracking-wide uppercase">UrbanPlan AI</span>
-          </div>
-          <h2 className="text-2xl font-bold text-slate-800">City Topography</h2>
-          <p className="text-slate-500">
-            {hasGeneratedPlan
-              ? "Interactive municipal zoning complete."
-              : "Upload an outline or configure parameters."}
-          </p>
-        </div>
-        <div className="flex gap-3">
-          <button className="p-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 shadow-sm">
-            <Maximize2 size={18} />
-          </button>
-          <button
-            onClick={exportToPDF}
-            disabled={!hasGeneratedPlan || isExporting}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+
+      <AnimatePresence>
+        {isGenerating && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-6 text-center"
           >
-            {isExporting ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
-            {isExporting ? "Exporting..." : "Export PDF"}
+            <Loader2 size={48} className="text-primary animate-spin mb-4" />
+            <h3 className="text-xl font-bold text-slate-800">Crunching Municipal Data...</h3>
+            <p className="text-slate-500">Running constraint satisfaction and A* routing.</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div id="export-grid" className="absolute inset-0 flex flex-col items-center justify-center pointer-events-auto overflow-hidden">
+        <InteractiveGrid editMode={!hasGeneratedPlan} />
+      </div>
+
+      {hasGeneratedPlan && (
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-3 glass-panel rounded-2xl px-6 py-4 border border-white/40 shadow-2xl z-20 pointer-events-auto">
+          <button 
+            onClick={exportToPDF}
+            disabled={isExporting}
+            className="flex items-center gap-2 px-5 py-2.5 bg-white text-slate-700 rounded-xl font-bold text-sm hover:shadow-lg transition-all active:scale-95 disabled:opacity-50"
+          >
+            {isExporting ? <Loader2 size={18} className="animate-spin" /> : <span className="material-symbols-outlined text-lg">picture_as_pdf</span>}
+            {isExporting ? "Exporting..." : "Export to PDF"}
+          </button>
+          <button className="flex items-center gap-2 px-5 py-2.5 bg-slate-800 text-white rounded-xl font-bold text-sm hover:shadow-lg transition-all active:scale-95">
+            <span className="material-symbols-outlined text-lg">restart_alt</span> Reset
           </button>
         </div>
-      </div>
-
-      <div className="flex-1 relative flex flex-col 2xl:flex-row gap-6 min-h-0">
-        {!hasGridData ? (
-          <div className="flex-1 min-h-[460px]">
-            <ProjectInit />
-          </div>
-        ) : (
-          <>
-            <div className="flex-1 min-h-[460px] glass-card rounded-2xl flex flex-col relative overflow-hidden p-0">
-              <AnimatePresence>
-                {isGenerating && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center"
-                  >
-                    <Loader2 size={48} className="text-indigo-600 animate-spin mb-4" />
-                    <h3 className="text-xl font-bold text-slate-800">Crunching Municipal Data...</h3>
-                    <p className="text-slate-500">Running constraint satisfaction and A* routing.</p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {hasGeneratedPlan ? (
-                <div
-                  id="export-grid"
-                  className="flex-1 w-full h-full flex flex-col items-center justify-center p-4"
-                >
-                  <InteractiveGrid />
-                </div>
-              ) : (
-                <div className="flex-1 w-full h-full flex flex-col items-center justify-center p-4">
-                  <InteractiveGrid editMode />
-                </div>
-              )}
-            </div>
-
-            <div className="w-full 2xl:w-[400px] 2xl:shrink-0 max-h-[72vh] 2xl:max-h-none">
-              <ZoningWizard />
-            </div>
-          </>
-        )}
-      </div>
+      )}
 
       {hasGeneratedPlan && (
         <div

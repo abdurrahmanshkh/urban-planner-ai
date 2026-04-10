@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Users, IndianRupee, ShieldCheck, AlertTriangle } from "lucide-react";
+import { useEffect, useMemo, useRef } from "react";
 import Tooltip from "./ui/Tooltip";
 import { usePlanStore } from "@/store/usePlanStore";
 import {
@@ -27,9 +26,7 @@ export default function ZoningWizard() {
     setLandAreaHectares,
     setBlockSizeMeters,
     setAmenityCount,
-    setGridLocked,
     isGridLocked,
-    generateCityPlan,
   } = usePlanStore();
 
   const didSeedAmenities = useRef(false);
@@ -43,167 +40,153 @@ export default function ZoningWizard() {
     }
   }, [amenities, idealAmenities, setAmenityCount]);
 
-  const formatINR = (value: number) => {
-    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(value);
-  };
 
   const effectiveLandAreaHectares = computedDevelopableAreaHectares > 0 ? computedDevelopableAreaHectares : landAreaHectares;
   const MAX_POPULATION = Math.round(effectiveLandAreaHectares * TARGET_MAX_PEOPLE_PER_HECTARE);
   const isOverpopulated = population > MAX_POPULATION;
 
-  // BUG FIX: Added max-h-full and ensured the parent div is a flex column
   return (
-    <div className="flex flex-col h-full max-h-full bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-6">
-      <div className="mb-6 shrink-0">
-        <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-          <ShieldCheck className="text-indigo-600" />
-          Zoning Parameters
-        </h2>
-        <p className="text-slate-500 text-sm mt-1">Define demographics to generate algorithmic recommendations.</p>
-      </div>
+    <div className="flex flex-col h-full bg-surface-container-low p-6">
+      <h2 className="text-xl font-semibold text-on-surface mb-6 flex items-center gap-2 font-headline shrink-0">
+        <span className="material-symbols-outlined text-primary">auto_fix</span> Zoning Wizard
+      </h2>
 
-      {/* BUG FIX: Added min-h-0 to allow flex scrolling */}
-      <div className="space-y-6 flex-1 overflow-y-auto pr-2 min-h-0 pb-4 custom-scroll">
-        <div>
-          <Tooltip content="The target demographic size for this development. Cannot exceed maximum density constraints." position="top">
-            <label className="block w-max text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2 cursor-help">
-              <Users size={16} className="text-slate-400" /> Expected Population
-            </label>
-          </Tooltip>
-          <input
-            type="number"
-            min="1000"
-            step="1000"
-            value={population}
-            disabled={isGridLocked}
-            onChange={(e) => setPopulation(Number(e.target.value))}
-            className={`w-full px-4 py-3 rounded-xl border outline-none transition-all disabled:bg-slate-50 disabled:text-slate-400 ${
-              isOverpopulated ? 'border-red-500 focus:ring-red-200' : 'border-slate-200 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100'
-            }`}
-          />
-          {isOverpopulated && (
-            <p className="text-xs text-red-500 mt-2 font-medium flex items-center gap-1">
-              <AlertTriangle size={12} /> Exceeds density cap of {TARGET_MAX_PEOPLE_PER_HECTARE} people/hectare. Max allowed is {MAX_POPULATION.toLocaleString()}.
-            </p>
-          )}
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Tooltip content="Calculated or manual bounds of the municipality in hectares. Validates limits." position="top">
-              <label className="block w-max text-sm font-semibold text-slate-700 mb-2 cursor-help">Total Land Area (ha)</label>
+      <div className="space-y-8 flex-1 overflow-y-auto pr-2 custom-scroll min-h-0">
+        
+        {/* Inputs Section */}
+        <div className="space-y-4">
+          <div className="group">
+            <Tooltip content="The target demographic size for this development. Cannot exceed maximum density constraints." position="top">
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 ml-1 cursor-help">Population Target</label>
             </Tooltip>
-            <input
-              type="number"
-              min="1"
-              step="1"
-              value={landAreaHectares}
-              disabled={isGridLocked}
-              onChange={(e) => setLandAreaHectares(Math.max(1, Number(e.target.value)))}
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 outline-none transition-all disabled:bg-slate-50 disabled:text-slate-400"
-            />
-            <p className="text-xs text-slate-500 mt-2">Grid count auto-scales from this area after map extraction.</p>
+            <div className="relative">
+              <input
+                type="number"
+                min="1000"
+                step="1000"
+                value={population}
+                disabled={isGridLocked}
+                onChange={(e) => setPopulation(Number(e.target.value))}
+                className={`w-full bg-surface-container-lowest border-2 rounded-xl px-4 py-3.5 text-on-surface font-medium transition-all ${
+                  isOverpopulated ? 'border-error focus:border-error focus:ring-1 focus:ring-error focus:bg-error-container/20' : 'border-transparent focus:border-primary/40 focus:ring-0 focus:bg-white'
+                } disabled:opacity-50`}
+              />
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined">group</span>
+            </div>
+            {isOverpopulated && (
+              <p className="text-[10px] text-error mt-2 font-bold uppercase tracking-wider">
+                Exceeds Cap ({MAX_POPULATION.toLocaleString()})
+              </p>
+            )}
           </div>
 
-          <div>
-            <Tooltip content={`Length of one side of a generic city block.\nRecommended: ${IDEAL_BLOCK_SIZE_METERS}m for walkability.\nMax: ${MAX_BLOCK_SIZE_METERS}m`} position="top">
-              <label className="block w-max text-sm font-semibold text-slate-700 mb-2 cursor-help">Block Size (meters)</label>
+          <div className="group">
+            <Tooltip content="Current total baseline land value. Determines algorithmic plot valuation." position="top">
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 ml-1 cursor-help">Total Base Value</label>
             </Tooltip>
-            <input
-              type="number"
-              min={MIN_BLOCK_SIZE_METERS}
-              max={MAX_BLOCK_SIZE_METERS}
-              step="5"
-              value={blockSizeMeters}
-              disabled={isGridLocked}
-              onChange={(e) => {
-                const value = Number(e.target.value);
-                setBlockSizeMeters(Math.max(MIN_BLOCK_SIZE_METERS, Math.min(MAX_BLOCK_SIZE_METERS, value)));
-              }}
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 outline-none transition-all disabled:bg-slate-50 disabled:text-slate-400"
-            />
-            <p className="text-xs text-slate-500 mt-2">Recommended default: {IDEAL_BLOCK_SIZE_METERS}m (walkable urban block range).</p>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-primary font-bold">₹</span>
+              <input
+                type="number"
+                min="1000000"
+                step="1000000"
+                value={totalLandValue}
+                disabled={isGridLocked}
+                onChange={(e) => setTotalLandValue(Number(e.target.value))}
+                className="w-full bg-surface-container-lowest border-2 border-transparent focus:border-primary/40 focus:ring-0 rounded-xl pl-9 pr-4 py-3.5 text-on-surface font-medium transition-all focus:bg-white disabled:opacity-50"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 mt-2">
+            <div className="group">
+              <Tooltip content="Calculated or manual bounds of the municipality in hectares. Validates limits." position="top">
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 cursor-help">Total Area (ha)</label>
+              </Tooltip>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={landAreaHectares}
+                disabled={isGridLocked}
+                onChange={(e) => setLandAreaHectares(Math.max(1, Number(e.target.value)))}
+                className="w-full bg-surface-container-lowest border-transparent focus:border-primary/40 focus:ring-0 rounded-xl px-3 py-2 text-on-surface text-sm font-medium transition-all disabled:opacity-50"
+              />
+            </div>
+            <div className="group">
+              <Tooltip content={`Length of one side of a generic city block.\nRec: ${IDEAL_BLOCK_SIZE_METERS}m\nMax: ${MAX_BLOCK_SIZE_METERS}m`} position="top">
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 cursor-help">Block Size (m)</label>
+              </Tooltip>
+              <input
+                type="number"
+                min={MIN_BLOCK_SIZE_METERS}
+                max={MAX_BLOCK_SIZE_METERS}
+                step="5"
+                value={blockSizeMeters}
+                disabled={isGridLocked}
+                onChange={(e) => {
+                  const value = Number(e.target.value);
+                  setBlockSizeMeters(Math.max(MIN_BLOCK_SIZE_METERS, Math.min(MAX_BLOCK_SIZE_METERS, value)));
+                }}
+                className="w-full bg-surface-container-lowest border-transparent focus:border-primary/40 focus:ring-0 rounded-xl px-3 py-2 text-on-surface text-sm font-medium transition-all disabled:opacity-50"
+              />
+            </div>
           </div>
         </div>
 
+        {/* Amenity Sliders */}
         <div>
-          <Tooltip content="Current total baseline land value. Determines plot-level algorithmic valuation." position="top">
-            <label className="block w-max text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2 cursor-help">
-              <IndianRupee size={16} className="text-slate-400" /> Total Base Land Value (₹)
-            </label>
-          </Tooltip>
-          <input
-            type="number"
-            min="1000000"
-            step="1000000"
-            value={totalLandValue}
-            disabled={isGridLocked}
-            onChange={(e) => setTotalLandValue(Number(e.target.value))}
-            className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 outline-none transition-all disabled:bg-slate-50 disabled:text-slate-400"
-          />
-          <p className="text-xs text-slate-500 mt-2 font-medium">Formatted: {formatINR(totalLandValue)}</p>
-        </div>
-
-        <hr className="border-slate-100" />
-
-        <div>
-          <Tooltip content="The minimum count of civic amenities needed based on the URDPFI guidelines for the set population." position="top">
-            <h3 className="text-sm w-max font-bold text-slate-800 uppercase tracking-wider mb-4 cursor-help">Infrastructure Requirements</h3>
-          </Tooltip>
-          <div className="space-y-5">
+          <h3 className="text-sm font-semibold text-slate-700 mb-4 border-b border-outline-variant/30 pb-2 font-headline">Amenity Distribution</h3>
+          <div className="space-y-6">
             {Object.values(AMENITY_CONFIG).map((amenity) => {
               const ideal = idealAmenities[amenity.id] || 0;
               const current = amenities[amenity.id] || 0;
               const deficit = current < ideal;
+              const exact = current === ideal;
+              
+              let pillClass = "bg-surface-container-highest text-slate-600";
+              let pillText = "Neutral";
+              let sliderClass = "accent-primary";
+              
+              if (deficit) {
+                pillClass = "bg-error-container text-on-error-container";
+                pillText = "Deficit";
+                sliderClass = "accent-error";
+              } else if (!exact && current > ideal) {
+                pillClass = "bg-secondary-container text-on-secondary-container";
+                pillText = "Surplus";
+                sliderClass = "accent-secondary";
+              } else if (exact) {
+                pillClass = "bg-primary-container text-white";
+                pillText = "Ideal";
+              }
 
               return (
-                <div key={amenity.id} className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="font-medium text-slate-700 flex items-center gap-2">
-                      <span>{amenity.icon}</span> {amenity.name}
-                    </span>
-                    <span className={`text-sm font-bold px-2 py-1 rounded-md ${deficit ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                      {current} / {ideal} Ideal
+                <div key={amenity.id} className="space-y-2">
+                  <div className="flex justify-between items-end">
+                    <span className="text-xs font-medium text-slate-600 flex items-center gap-1.5"><span className="text-base">{amenity.icon}</span> {amenity.name}</span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-tighter ${pillClass}`}>
+                      {pillText}
                     </span>
                   </div>
                   <input
                     type="range"
                     min="0"
-                    max={Math.max(10, ideal * 2)}
+                    max={Math.max(10, ideal * 2, current + 5)}
                     value={current}
                     disabled={isGridLocked}
                     onChange={(e) => setAmenityCount(amenity.id, Number(e.target.value))}
-                    className="w-full accent-indigo-600"
+                    className={`w-full h-1.5 bg-slate-200 rounded-full appearance-none cursor-pointer ${sliderClass}`}
                   />
+                  <div className="flex justify-between text-[10px] text-slate-400 font-bold uppercase">
+                    <span>Count: {current}</span>
+                    <span>Ideal: {ideal}</span>
+                  </div>
                 </div>
               );
             })}
           </div>
         </div>
-      </div>
-
-      <div className="mt-4 pt-4 border-t border-slate-100 shrink-0">
-        <button 
-          disabled={isOverpopulated}
-          onClick={async () => {
-            if (isGridLocked) {
-              setGridLocked(false);
-            } else {
-              setGridLocked(true);
-              await generateCityPlan();
-            }
-          }}
-          // BUG FIX: Removed reliance on custom config, explicitly declared bg-indigo-600 and text-white
-          className={`w-full py-3 rounded-xl font-bold transition-all flex justify-center items-center gap-2 ${
-            isOverpopulated 
-              ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
-              : isGridLocked 
-                ? 'bg-slate-200 text-slate-700 hover:bg-slate-300' 
-                : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-600/20'
-          }`}
-        >
-          {isGridLocked ? "Unlock Parameters" : "Lock & Generate Plan ⚡"}
-        </button>
       </div>
     </div>
   );
