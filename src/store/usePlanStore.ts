@@ -36,6 +36,8 @@ interface PlanState {
   landAreaHectares: number;
   blockSizeMeters: number;
   computedDevelopableAreaHectares: number;
+  isPopulationEdited: boolean;
+  isLandValueEdited: boolean;
   
   // Amenities (User selected counts)
   amenities: Record<string, number>;
@@ -71,6 +73,8 @@ export const usePlanStore = create<PlanState>((set, get) => ({
   landAreaHectares: 320,
   blockSizeMeters: IDEAL_BLOCK_SIZE_METERS,
   computedDevelopableAreaHectares: 0,
+  isPopulationEdited: false,
+  isLandValueEdited: false,
   
   amenities: {
     school: 0, hospital: 0, park: 0, supermarket: 0, bus_station: 0, community_center: 0,
@@ -96,7 +100,9 @@ export const usePlanStore = create<PlanState>((set, get) => ({
       roadAreaHectares,
       computedDevelopableAreaHectares: finalDevelopable,
       population: finalPop,
-      totalLandValue: Math.round(finalDevelopable * 20000000) // ₹2Cr per hectare default
+      totalLandValue: Math.round(finalDevelopable * 20000000), // ₹2Cr per hectare default
+      isPopulationEdited: false,
+      isLandValueEdited: false,
     });
   },
   updateCell: (cellKey, updates) =>
@@ -106,8 +112,8 @@ export const usePlanStore = create<PlanState>((set, get) => ({
         [cellKey]: { ...state.gridData[cellKey], ...updates },
       },
     })),
-  setPopulation: (pop) => set({ population: pop }),
-  setTotalLandValue: (val) => set({ totalLandValue: val }),
+  setPopulation: (pop) => set({ population: pop, isPopulationEdited: true }),
+  setTotalLandValue: (val) => set({ totalLandValue: val, isLandValueEdited: true }),
   setLandAreaHectares: (landArea) => set({ landAreaHectares: landArea }),
   setBlockSizeMeters: (blockSize) => set({ blockSizeMeters: blockSize }),
   setAmenityCount: (type, count) =>
@@ -203,13 +209,24 @@ export const usePlanStore = create<PlanState>((set, get) => ({
 
     const roadNetwork = generateRoadNetwork(newGrid, population);
     const roadAreaHectares = calculateRoadAreaHectares(roadNetwork, blockSizeMeters);
+    const finalDevelopable = Math.max(0, landAreaHectares - roadAreaHectares);
 
-    set({
+    const { isPopulationEdited, isLandValueEdited } = get();
+    const updates: Partial<PlanState> = {
       gridData: newGrid,
       roadNetwork,
       roadAreaHectares,
-      computedDevelopableAreaHectares: Math.max(0, landAreaHectares - roadAreaHectares),
-    });
+      computedDevelopableAreaHectares: finalDevelopable,
+    };
+
+    if (!isPopulationEdited) {
+      updates.population = Math.round(finalDevelopable * TARGET_MAX_PEOPLE_PER_HECTARE * 0.8) || 1000;
+    }
+    if (!isLandValueEdited) {
+      updates.totalLandValue = Math.round(finalDevelopable * 20000000);
+    }
+
+    set(updates);
   },
   setInitMode: (mode) => set({ initMode: mode }),
   resetProject: () => set({
@@ -219,6 +236,8 @@ export const usePlanStore = create<PlanState>((set, get) => ({
     isGridLocked: false,
     computedDevelopableAreaHectares: 0,
     initMode: null,
+    isPopulationEdited: false,
+    isLandValueEdited: false,
     amenities: { school: 0, hospital: 0, park: 0, supermarket: 0, bus_station: 0, community_center: 0 },
   }),
   clearAmenities: () => {

@@ -4,14 +4,14 @@ import AnalyticsPanel from "@/components/AnalyticsPanel";
 import dynamic from "next/dynamic";
 import { usePlanStore } from "@/store/usePlanStore";
 
+const GridVisualizer = dynamic(() => import("@/components/GridVisualizer"), {
+  ssr: false,
+});
+
 export default function Home() {
   const { gridData } = usePlanStore();
   const hasGridData = Object.keys(gridData).length > 0;
 
-  const GridVisualizer = dynamic(() => import("@/components/GridVisualizer"), {
-    ssr: false,
-  });
-  
   return (
     <main className="flex h-screen w-full bg-slate-100 overflow-hidden relative">
       {/* Left Sidebar */}
