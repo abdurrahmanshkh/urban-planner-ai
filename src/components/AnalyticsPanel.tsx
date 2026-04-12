@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { Activity, IndianRupee, Users } from "lucide-react";
 import { usePlanStore } from "@/store/usePlanStore";
 import { AMENITY_CONFIG, calculateIdealAmenities, getBlockAreaHectares } from "@/lib/planningMath";
-import { calculateEnvironmentalImpact, calculateBudgetForecast, calculateTrafficLoad } from "@/lib/municipalAnalytics";
+import { calculateEnvironmentalImpact, calculateBudgetForecast, calculateTrafficLoad, calculateWaterDemand } from "@/lib/municipalAnalytics";
 
 export default function AnalyticsPanel() {
   const { gridData, population, gridSize, amenities, blockSizeMeters, roadAreaHectares, roadNetwork } = usePlanStore();
@@ -76,6 +76,7 @@ export default function AnalyticsPanel() {
   const envImpact = calculateEnvironmentalImpact(population, amenityActualCounts['park'] || 0, blockSizeMeters);
   const budget = calculateBudgetForecast(amenityActualCounts);
   const traffic = calculateTrafficLoad(population, roadNetwork);
+  const water = calculateWaterDemand(population);
 
   // Formatter
   const formatINR = (val: number) => {
@@ -181,17 +182,46 @@ export default function AnalyticsPanel() {
               <div className="bg-amber-50 border border-amber-100 rounded-xl p-4">
                 <div className="flex justify-between items-center mb-2">
                   <span className="font-bold text-amber-900">Urban Traffic Flow</span>
-                  <span className={`text-xs font-bold px-2 py-1 rounded-md ${traffic.status === 'Congested' ? 'bg-red-100 text-red-700' : traffic.status === 'Moderate' ? 'bg-amber-200 text-amber-800' : 'bg-emerald-100 text-emerald-700'}`}>
+                  <span className={`text-xs font-bold px-2 py-1 rounded-md ${traffic.status.includes('Oversaturated') || traffic.status.includes('At Capacity') ? 'bg-red-100 text-red-700' : traffic.status.includes('Near') ? 'bg-amber-200 text-amber-800' : 'bg-emerald-100 text-emerald-700'}`}>
                     {traffic.status}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm text-amber-800/80 mb-1">
                   <span>Peak Hr Trips: {Math.round(traffic.peakHourTrips).toLocaleString()} PCU</span>
                 </div>
-                <div className="flex justify-between text-sm text-amber-800 font-medium">
-                  <span>V/C Ratio:</span>
+                <div className="flex justify-between text-sm text-amber-800 font-medium mb-1">
+                  <span>Avg V/C Ratio:</span>
                   <span>{traffic.avgVCRatio.toFixed(2)}</span>
                 </div>
+                <div className="flex justify-between text-sm text-amber-800/70">
+                  <span>Worst Corridor V/C:</span>
+                  <span>{traffic.worstVCRatio.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm text-amber-800/70 mt-1">
+                  <span>Road Corridors:</span>
+                  <span>{traffic.numCorridors}</span>
+                </div>
+              </div>
+
+              {/* Water & Sanitation (CPHEEO) */}
+              <div className="bg-cyan-50 border border-cyan-100 rounded-xl p-4">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="font-bold text-cyan-900">Water & Sanitation</span>
+                  <span className="text-xs font-bold px-2 py-1 rounded-md bg-cyan-100 text-cyan-700">CPHEEO</span>
+                </div>
+                <div className="flex justify-between text-sm text-cyan-800 font-medium mb-1">
+                  <span>Water Demand:</span>
+                  <span>{water.dailyDemandMLD} MLD</span>
+                </div>
+                <div className="flex justify-between text-sm text-cyan-700 mb-1">
+                  <span>Wastewater Gen:</span>
+                  <span>{water.wastewaterMLD} MLD</span>
+                </div>
+                <div className="flex justify-between text-sm text-cyan-700">
+                  <span>STP Capacity Needed:</span>
+                  <span>{water.stpCapacityMLD} MLD</span>
+                </div>
+                <p className="text-xs text-cyan-600 mt-2">Based on {water.lpcd} LPCD standard</p>
               </div>
             </div>
 

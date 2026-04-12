@@ -2,7 +2,8 @@ import { AMENITY_CONFIG } from "@/lib/planningMath";
 import {
   calculateEnvironmentalImpact,
   calculateBudgetForecast,
-  calculateTrafficLoad
+  calculateTrafficLoad,
+  calculateWaterDemand
 } from "@/lib/municipalAnalytics";
 
 export interface PDFExportData {
@@ -261,19 +262,34 @@ export const generatePDFReport = async (data: PDFExportData) => {
     pdf.text("Urban Traffic Flow Profile", margin, p3Y);
     p3Y += 8;
     pdf.setFontSize(10);
-    pdf.text(`Status: ${traffic.status}`, margin, p3Y);
+    pdf.text(`Level of Service: ${traffic.status}`, margin, p3Y);
     p3Y += 6;
-    pdf.text(`Peak Hour Volume / Capacity (V/C) Ratio: ${traffic.avgVCRatio.toFixed(2)}`, margin, p3Y);
+    pdf.text(`Average V/C Ratio: ${traffic.avgVCRatio.toFixed(2)}`, margin, p3Y);
+    p3Y += 6;
+    pdf.text(`Worst Corridor V/C Ratio: ${traffic.worstVCRatio.toFixed(2)}`, margin, p3Y);
     p3Y += 6;
     pdf.text(`Estimated Daily Trips: ${Math.round(traffic.dailyTrips).toLocaleString()}`, margin, p3Y);
     p3Y += 6;
     pdf.text(`Peak Hour System Load: ${Math.round(traffic.peakHourTrips).toLocaleString()} PCUs`, margin, p3Y);
     p3Y += 6;
-    pdf.text(`Total Network Capacity: ${Math.round(traffic.networkCapacityPCU).toLocaleString()} PCUs/Hr`, margin, p3Y);
+    pdf.text(`Road Corridors: ${traffic.numCorridors} | Network Capacity: ${Math.round(traffic.networkCapacityPCU).toLocaleString()} PCU/Hr`, margin, p3Y);
+    p3Y += 14;
+
+    // Water & Sanitation (CPHEEO)
+    const water = calculateWaterDemand(data.population);
+    pdf.setFontSize(13);
+    pdf.text("Water & Sanitation (CPHEEO Standards)", margin, p3Y);
+    p3Y += 8;
+    pdf.setFontSize(10);
+    pdf.text(`Domestic Water Demand: ${water.dailyDemandMLD} MLD (${water.lpcd} LPCD)`, margin, p3Y);
+    p3Y += 6;
+    pdf.text(`Wastewater Generation: ${water.wastewaterMLD} MLD (80% of supply)`, margin, p3Y);
+    p3Y += 6;
+    pdf.text(`STP Capacity Required: ${water.stpCapacityMLD} MLD`, margin, p3Y);
 
     pdf.setFontSize(8.5);
     pdf.setTextColor(100, 116, 139);
-    pdf.text("Powered by UrbanPlan AI - Suitable for academic planning review", margin, pdfHeight - 8);
+    pdf.text("Powered by UrbanPlan AI — Standards: URDPFI 2014, IRC:86-1983, CPHEEO, HCM LOS", margin, pdfHeight - 8);
 
     pdf.save(`UrbanPlan_Report_${new Date().getTime()}.pdf`);
   } catch (error) {

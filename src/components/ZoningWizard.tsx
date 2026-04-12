@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo } from "react";
 import { Users, IndianRupee, ShieldCheck, AlertTriangle } from "lucide-react";
 import Tooltip from "./ui/Tooltip";
 import { usePlanStore } from "@/store/usePlanStore";
