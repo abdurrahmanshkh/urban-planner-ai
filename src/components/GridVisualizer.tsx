@@ -126,9 +126,6 @@ export default function GridVisualizer() {
           </p>
         </div>
         <div className="flex gap-3">
-          <button className="p-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 shadow-sm">
-            <Maximize2 size={18} />
-          </button>
           <button
             onClick={exportToPDF}
             disabled={!hasGeneratedPlan || isExporting}
