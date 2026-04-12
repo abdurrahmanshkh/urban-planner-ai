@@ -2,8 +2,12 @@
 import Sidebar from "@/components/Sidebar";
 import AnalyticsPanel from "@/components/AnalyticsPanel";
 import dynamic from "next/dynamic";
+import { usePlanStore } from "@/store/usePlanStore";
 
 export default function Home() {
+  const { gridData } = usePlanStore();
+  const hasGridData = Object.keys(gridData).length > 0;
+
   const GridVisualizer = dynamic(() => import("@/components/GridVisualizer"), {
     ssr: false,
   });
@@ -11,7 +15,7 @@ export default function Home() {
   return (
     <main className="flex h-screen w-full bg-slate-100 overflow-hidden relative">
       {/* Left Sidebar */}
-      <div className="hidden md:block shrink-0">
+      <div className="hidden md:block shrink-0 relative z-30">
         <Sidebar />
       </div>
 
@@ -21,9 +25,11 @@ export default function Home() {
       </div>
 
       {/* Right Analytics Panel */}
-      <div className="hidden lg:block h-full shrink-0 z-20">
-        <AnalyticsPanel />
-      </div>
+      {hasGridData && (
+        <div className="hidden lg:block h-full shrink-0 z-20">
+          <AnalyticsPanel />
+        </div>
+      )}
     </main>
   );
 }

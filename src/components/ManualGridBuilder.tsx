@@ -29,7 +29,7 @@ export default function ManualGridBuilder() {
     <div className="flex flex-col h-full bg-white rounded-2xl border border-white/50 p-6 shadow-soft overflow-hidden min-h-[460px]">
       <div className="mb-6">
         <h2 className="text-xl font-bold flex items-center gap-2 text-slate-800">
-          <LayoutGrid className="text-indigo-500" />
+          <LayoutGrid className="text-primary" />
           Manual Grid Configuration
         </h2>
         <p className="text-slate-500 text-sm mt-1">Define the extents of your city block layout explicitly.</p>
@@ -40,7 +40,7 @@ export default function ManualGridBuilder() {
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
               <Maximize size={16} className="text-slate-400" /> Grid Resolution
-              <span className="text-indigo-600 ml-auto bg-indigo-50 px-2 py-0.5 rounded-md text-xs">{size} × {size}</span>
+              <span className="text-primary ml-auto bg-blue-50 px-2 py-0.5 rounded-md text-xs">{size} × {size}</span>
             </label>
             <input
               type="range"
@@ -49,7 +49,7 @@ export default function ManualGridBuilder() {
               step="1"
               value={size}
               onChange={(e) => setSize(Number(e.target.value))}
-              className="w-full accent-indigo-500"
+              className="w-full accent-primary"
             />
             <div className="flex justify-between text-xs text-slate-400 mt-2 font-medium">
               <span>10x10</span>
@@ -69,13 +69,13 @@ export default function ManualGridBuilder() {
               step="5"
               value={blockSizeMeters}
               onChange={(e) => setBlockSizeMeters(Math.max(MIN_BLOCK_SIZE_METERS, Math.min(MAX_BLOCK_SIZE_METERS, Number(e.target.value))))}
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all text-slate-700 font-medium"
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-primary focus:ring-2 focus:ring-blue-100 outline-none transition-all text-slate-700 font-medium"
             />
             <p className="text-xs text-slate-500 mt-2">Recommended: {IDEAL_BLOCK_SIZE_METERS}m.</p>
           </div>
 
-          <div className="p-4 bg-gradient-to-br from-slate-50 to-indigo-50/30 border border-slate-100 rounded-xl relative overflow-hidden">
-             <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-100/50 rounded-bl-full -mr-4 -mt-4 opacity-50 pointer-events-none" />
+          <div className="p-4 bg-gradient-to-br from-slate-50 to-blue-50/30 border border-slate-100 rounded-xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-blue-100/50 rounded-bl-full -mr-4 -mt-4 opacity-50 pointer-events-none" />
              <div className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1 relative z-10">Estimated Area</div>
              <div className="text-2xl font-bold text-slate-800 relative z-10">{calculateArea(size, blockSizeMeters).toFixed(1)} <span className="text-sm font-medium text-slate-500">hectares</span></div>
           </div>

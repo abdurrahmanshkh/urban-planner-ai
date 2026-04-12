@@ -56,7 +56,7 @@ export default function ZoningWizard() {
     <div className="flex flex-col h-full max-h-full bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-6">
       <div className="mb-6 shrink-0">
         <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-          <ShieldCheck className="text-indigo-600" />
+          <ShieldCheck className="text-primary" />
           Zoning Parameters
         </h2>
         <p className="text-slate-500 text-sm mt-1">Define demographics to generate algorithmic recommendations.</p>
@@ -78,7 +78,7 @@ export default function ZoningWizard() {
             disabled={isGridLocked}
             onChange={(e) => setPopulation(Number(e.target.value))}
             className={`w-full px-4 py-3 rounded-xl border outline-none transition-all disabled:bg-slate-50 disabled:text-slate-400 ${
-              isOverpopulated ? 'border-red-500 focus:ring-red-200' : 'border-slate-200 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100'
+              isOverpopulated ? 'border-red-500 focus:ring-red-200' : 'border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary-light'
             }`}
           />
           {isOverpopulated && (
@@ -100,7 +100,7 @@ export default function ZoningWizard() {
               value={landAreaHectares}
               disabled={isGridLocked}
               onChange={(e) => setLandAreaHectares(Math.max(1, Number(e.target.value)))}
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 outline-none transition-all disabled:bg-slate-50 disabled:text-slate-400"
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary-light outline-none transition-all disabled:bg-slate-50 disabled:text-slate-400"
             />
             <p className="text-xs text-slate-500 mt-2">Grid count auto-scales from this area after map extraction.</p>
           </div>
@@ -120,7 +120,7 @@ export default function ZoningWizard() {
                 const value = Number(e.target.value);
                 setBlockSizeMeters(Math.max(MIN_BLOCK_SIZE_METERS, Math.min(MAX_BLOCK_SIZE_METERS, value)));
               }}
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 outline-none transition-all disabled:bg-slate-50 disabled:text-slate-400"
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary-light outline-none transition-all disabled:bg-slate-50 disabled:text-slate-400"
             />
             <p className="text-xs text-slate-500 mt-2">Recommended default: {IDEAL_BLOCK_SIZE_METERS}m (walkable urban block range).</p>
           </div>
@@ -139,7 +139,7 @@ export default function ZoningWizard() {
             value={totalLandValue}
             disabled={isGridLocked}
             onChange={(e) => setTotalLandValue(Number(e.target.value))}
-            className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 outline-none transition-all disabled:bg-slate-50 disabled:text-slate-400"
+            className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary-light outline-none transition-all disabled:bg-slate-50 disabled:text-slate-400"
           />
           <p className="text-xs text-slate-500 mt-2 font-medium">Formatted: {formatINR(totalLandValue)}</p>
         </div>
@@ -173,7 +173,7 @@ export default function ZoningWizard() {
                     value={current}
                     disabled={isGridLocked}
                     onChange={(e) => setAmenityCount(amenity.id, Number(e.target.value))}
-                    className="w-full accent-indigo-600"
+                    className="w-full accent-primary"
                   />
                 </div>
               );
@@ -199,7 +199,7 @@ export default function ZoningWizard() {
               ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
               : isGridLocked 
                 ? 'bg-slate-200 text-slate-700 hover:bg-slate-300' 
-                : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-600/20'
+                : 'bg-primary text-white hover:bg-primary-hover shadow-md shadow-primary/20'
           }`}
         >
           {isGridLocked ? "Unlock Parameters" : "Lock & Generate Plan ⚡"}

@@ -146,18 +146,18 @@ export default function AnalyticsPanel() {
             <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mt-8 mb-4">Advanced Municipal Modules</h4>
             <div className="space-y-4 mb-6">
               {/* Environmental Impact */}
-              <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4">
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
                 <div className="flex justify-between items-center mb-2">
-                  <span className="font-bold text-indigo-900">Environment & Green Cover</span>
+                  <span className="font-bold text-blue-900">Environment & Green Cover</span>
                   <span className={`text-xs font-bold px-2 py-1 rounded-md ${envImpact.status === 'Deficit' ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
                     {envImpact.status}
                   </span>
                 </div>
-                <div className="flex justify-between text-sm text-indigo-700">
+                <div className="flex justify-between text-sm text-blue-700">
                   <span>Provided: {envImpact.providedSqmPerPerson.toFixed(1)} sqm/person</span>
                   <span>Required: {envImpact.requiredSqmPerPerson} sqm</span>
                 </div>
-                <div className="mt-2 h-1.5 w-full bg-indigo-200 rounded-full overflow-hidden">
+                <div className="mt-2 h-1.5 w-full bg-blue-200 rounded-full overflow-hidden">
                   <div className={`h-full transition-all duration-500 ${envImpact.status === 'Surplus' ? 'bg-emerald-500' : 'bg-red-400'}`} style={{ width: `${envImpact.score * 10}%` }}></div>
                 </div>
               </div>
