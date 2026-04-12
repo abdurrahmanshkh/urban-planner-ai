@@ -21,7 +21,7 @@ export default function Home() {
       </div>
 
       {/* Right Analytics Panel */}
-      <div className="hidden xl:block h-full shrink-0 z-20">
+      <div className="hidden lg:block h-full shrink-0 z-20">
         <AnalyticsPanel />
       </div>
     </main>

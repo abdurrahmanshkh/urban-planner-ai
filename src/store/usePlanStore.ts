@@ -54,6 +54,7 @@ interface PlanState {
   toggleBlockAvailability: (cellKey: string) => void;
   setInitMode: (mode: 'map' | 'manual' | null) => void;
   resetProject: () => void;
+  clearAmenities: () => void;
 }
 
 export const usePlanStore = create<PlanState>((set, get) => ({
@@ -220,4 +221,25 @@ export const usePlanStore = create<PlanState>((set, get) => ({
     initMode: null,
     amenities: { school: 0, hospital: 0, park: 0, supermarket: 0, bus_station: 0, community_center: 0 },
   }),
+  clearAmenities: () => {
+    const { gridData, blockSizeMeters, landAreaHectares, population } = get();
+    const newGrid: Record<string, GridCell> = {};
+    for (const key in gridData) {
+      const cell = gridData[key];
+      if (cell.type === 'amenity') {
+        newGrid[key] = { ...cell, type: 'residential', amenityType: undefined, accessibilityScore: undefined, landValue: undefined };
+      } else {
+        newGrid[key] = { ...cell, accessibilityScore: undefined, landValue: undefined };
+      }
+    }
+    const roadNetwork = generateRoadNetwork(newGrid, population);
+    const roadAreaHectares = calculateRoadAreaHectares(roadNetwork, blockSizeMeters);
+
+    set({
+      gridData: newGrid,
+      roadNetwork,
+      roadAreaHectares,
+      computedDevelopableAreaHectares: Math.max(0, landAreaHectares - roadAreaHectares),
+    });
+  },
 }));

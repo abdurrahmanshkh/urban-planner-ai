@@ -139,12 +139,12 @@ export default function GridVisualizer() {
 
       <div className="flex-1 relative flex flex-col 2xl:flex-row gap-6 min-h-0">
         {!hasGridData ? (
-          <div className="flex-1 min-h-[460px]">
+          <div className="flex-1 min-h-[300px]">
             <ProjectInit />
           </div>
         ) : (
           <>
-            <div className="flex-1 min-h-[460px] glass-card rounded-2xl flex flex-col relative overflow-hidden p-0">
+            <div className="flex-1 min-h-[300px] glass-card rounded-2xl flex flex-col relative overflow-hidden p-0">
               <AnimatePresence>
                 {isGenerating && (
                   <motion.div

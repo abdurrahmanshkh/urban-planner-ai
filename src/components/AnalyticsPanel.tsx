@@ -89,9 +89,9 @@ export default function AnalyticsPanel() {
       initial={{ x: 50, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       transition={{ delay: 0.2 }}
-      className="w-full xl:w-[340px] bg-white h-full border-l border-slate-200 shadow-[rgba(0,0,0,0.05)_-10px_0px_20px_0px] overflow-y-auto relative z-20 custom-scroll"
+      className="w-[300px] xl:w-[340px] bg-white h-full border-l border-slate-200 shadow-[rgba(0,0,0,0.05)_-10px_0px_20px_0px] overflow-y-auto relative z-20 custom-scroll flex-shrink-0"
     >
-      <div className="p-6">
+      <div className="p-5 xl:p-6">
         <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
           <Activity className="text-success" size={20} />
           Real-time Analytics
