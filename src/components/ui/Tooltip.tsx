@@ -68,7 +68,7 @@ export default function Tooltip({ children, content, position = "top" }: Tooltip
             style={{ pointerEvents: "none" }}
           >
             <div className="flex gap-2">
-              <Info size={14} className="text-indigo-400 shrink-0 mt-0.5" />
+              <Info size={14} className="text-blue-400 shrink-0 mt-0.5" />
               <p className="leading-snug font-medium whitespace-pre-wrap">{content}</p>
             </div>
             <div className={`absolute border-4 border-transparent ${getArrowClasses()}`} />

@@ -39,13 +39,14 @@ const classifyRoad = (
   amenitiesNearby: number,
   populationPerCell: number
 ): { roadClass: RoadClass; laneCount: number; widthMeters: number } => {
+  // IRC:86-1983 Urban Road Design Standards
   if (demandScore >= 18 || amenitiesNearby >= 8 || populationPerCell >= 240) {
-    return { roadClass: "arterial", laneCount: 4, widthMeters: 20 };
+    return { roadClass: "arterial", laneCount: 4, widthMeters: 24 }; // IRC: 4-lane arterial = 21-24m
   }
   if (demandScore >= 10 || amenitiesNearby >= 4 || populationPerCell >= 140) {
-    return { roadClass: "collector", laneCount: 3, widthMeters: 14 };
+    return { roadClass: "collector", laneCount: 2, widthMeters: 14 }; // IRC: 2-lane collector = ~14m ROW
   }
-  return { roadClass: "local", laneCount: 2, widthMeters: 10 };
+  return { roadClass: "local", laneCount: 2, widthMeters: 7 }; // IRC: 2-lane local = 7m standard
 };
 
 const getCellDemand = (cell?: GridCell): number => {
@@ -69,22 +70,24 @@ const getCellDemand = (cell?: GridCell): number => {
   return 1.2; // residential baseline
 };
 
+// 15-Minute City Walkability Standards
 const SERVICE_RADIUS_METERS: Record<string, number> = {
-  hospital: 1800,
-  school: 1200,
-  park: 800,
-  supermarket: 700,
-  bus_station: 1200,
-  community_center: 1000,
+  hospital: 1500,          // 15-min walk max (~1.5km)
+  school: 800,             // 10-min walk for children (~800m max)
+  park: 400,               // 5-min walk standard for local parks (URDPFI)
+  supermarket: 500,        // 5-7 min walk for daily essentials
+  bus_station: 800,        // 10-min walk to transit (15-min city standard)
+  community_center: 1000,  // 10-12 min acceptable for occasional use
 };
 
+// Accessibility weights reflect real-world impact on residential desirability
 const SERVICE_WEIGHT: Record<string, number> = {
-  hospital: 2.2,
-  school: 1.8,
-  park: 1.6,
-  supermarket: 1.4,
-  bus_station: 1.3,
-  community_center: 1.2,
+  hospital: 1.8,           // Important but infrequent use
+  school: 2.5,             // Highest daily impact on families (URDPFI emphasis)
+  park: 2.0,               // Strong QoL & property value impact (green cover)
+  supermarket: 1.8,        // Daily necessity; strong walkability requirement
+  bus_station: 2.2,        // Transit access = #1 driver of urban land value (TOD)
+  community_center: 1.0,   // Occasional use; lowest daily impact
 };
 
 function scoreAccessibilityAtCell(

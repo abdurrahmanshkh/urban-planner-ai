@@ -114,7 +114,7 @@ export default function GridVisualizer() {
     >
       <div className="flex flex-wrap justify-between items-center gap-3 mb-4 md:mb-6">
         <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1 text-indigo-700 mb-2">
+          <div className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-blue-700 mb-2">
             <Layers size={14} />
             <span className="text-xs font-semibold tracking-wide uppercase">UrbanPlan AI</span>
           </div>
@@ -126,28 +126,27 @@ export default function GridVisualizer() {
           </p>
         </div>
         <div className="flex gap-3">
-          <button className="p-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 shadow-sm">
-            <Maximize2 size={18} />
-          </button>
-          <button
-            onClick={exportToPDF}
-            disabled={!hasGeneratedPlan || isExporting}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-          >
-            {isExporting ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
-            {isExporting ? "Exporting..." : "Export PDF"}
-          </button>
+          {hasGridData && (
+            <button
+              onClick={exportToPDF}
+              disabled={!hasGeneratedPlan || isExporting}
+              className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            >
+              {isExporting ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
+              {isExporting ? "Exporting..." : "Export PDF"}
+            </button>
+          )}
         </div>
       </div>
 
       <div className="flex-1 relative flex flex-col 2xl:flex-row gap-6 min-h-0">
         {!hasGridData ? (
-          <div className="flex-1 min-h-[460px]">
+          <div className="flex-1 min-h-[300px]">
             <ProjectInit />
           </div>
         ) : (
           <>
-            <div className="flex-1 min-h-[460px] glass-card rounded-2xl flex flex-col relative overflow-hidden p-0">
+            <div className="flex-1 min-h-[300px] glass-card rounded-2xl flex flex-col relative overflow-hidden p-0">
               <AnimatePresence>
                 {isGenerating && (
                   <motion.div
@@ -156,7 +155,7 @@ export default function GridVisualizer() {
                     exit={{ opacity: 0 }}
                     className="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center"
                   >
-                    <Loader2 size={48} className="text-indigo-600 animate-spin mb-4" />
+                    <Loader2 size={48} className="text-primary animate-spin mb-4" />
                     <h3 className="text-xl font-bold text-slate-800">Crunching Municipal Data...</h3>
                     <p className="text-slate-500">Running constraint satisfaction and A* routing.</p>
                   </motion.div>

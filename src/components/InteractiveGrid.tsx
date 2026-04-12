@@ -146,7 +146,7 @@ export default function InteractiveGrid({ editMode = false }: { editMode?: boole
                   ${isDraggable ? "cursor-grab active:cursor-grabbing hover:brightness-110 shadow-sm z-10" : ""}
                   ${editMode && !isGridLocked && (cell.type === "residential" || cell.type === "disabled") ? "cursor-pointer" : ""}
                   ${cell.type === "residential" && !draggedKey ? "hover:bg-yellow-200/80 transition-colors" : ""}
-                  ${draggedKey === cellKey ? "opacity-40 animate-pulse outline outline-2 outline-indigo-500 scale-95" : ""}
+                  ${draggedKey === cellKey ? "opacity-40 animate-pulse outline outline-2 outline-primary scale-95" : ""}
                   ${dragOverKey === cellKey && cell.type === "residential" ? "bg-emerald-200/80 border-emerald-500 border-2 scale-105 z-20 shadow-lg" : ""}
                   ${dragOverKey === cellKey && cell.type !== "residential" ? "bg-red-200/80 border-red-500 border-2 z-20" : ""}
                 `}
