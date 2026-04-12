@@ -7,7 +7,7 @@ import {
   calculateRoadAreaHectares,
   RoadSegment,
 } from "@/lib/algorithms";
-import { IDEAL_BLOCK_SIZE_METERS, TARGET_MAX_PEOPLE_PER_HECTARE } from "@/lib/planningMath";
+import { IDEAL_BLOCK_SIZE_METERS, TARGET_MAX_PEOPLE_PER_HECTARE, calculateIdealAmenities } from "@/lib/planningMath";
 
 export type CellType = 'residential' | 'amenity' | 'disabled' | 'road';
 
@@ -38,6 +38,7 @@ interface PlanState {
   computedDevelopableAreaHectares: number;
   isPopulationEdited: boolean;
   isLandValueEdited: boolean;
+  isAmenitiesEdited: boolean;
   
   // Amenities (User selected counts)
   amenities: Record<string, number>;
@@ -75,21 +76,23 @@ export const usePlanStore = create<PlanState>((set, get) => ({
   computedDevelopableAreaHectares: 0,
   isPopulationEdited: false,
   isLandValueEdited: false,
+  isAmenitiesEdited: false,
   
-  amenities: {
-    school: 0, hospital: 0, park: 0, supermarket: 0, bus_station: 0, community_center: 0,
-  },
+  amenities: calculateIdealAmenities(50000, 15),
 
   setGridData: (size, data, developableAreaHectares) => {
-    const { blockSizeMeters, landAreaHectares } = get();
+    const { blockSizeMeters } = get();
     
-    // Calculate a safe default population based on estimated developable area
-    const estimatedDevelopable = developableAreaHectares ?? (landAreaHectares * 0.7);
+    // Accurately compute the modeled area based solely on active blocks
+    const activeCellsCount = Object.values(data).filter(c => c.type !== 'disabled').length;
+    const modeledAreaHectares = activeCellsCount * ((blockSizeMeters * blockSizeMeters) / 10000);
+    
+    const estimatedDevelopable = developableAreaHectares ?? (modeledAreaHectares * 0.7);
     const idealPop = Math.round(estimatedDevelopable * TARGET_MAX_PEOPLE_PER_HECTARE * 0.8) || 1000;
 
     const roadNetwork = generateRoadNetwork(data, idealPop);
     const roadAreaHectares = calculateRoadAreaHectares(roadNetwork, blockSizeMeters);
-    const inferredDevelopableArea = Math.max(0, landAreaHectares - roadAreaHectares);
+    const inferredDevelopableArea = Math.max(0, modeledAreaHectares - roadAreaHectares);
     const finalDevelopable = Math.max(0, developableAreaHectares ?? inferredDevelopableArea);
     const finalPop = Math.round(finalDevelopable * TARGET_MAX_PEOPLE_PER_HECTARE * 0.8) || 1000;
 
@@ -99,10 +102,13 @@ export const usePlanStore = create<PlanState>((set, get) => ({
       roadNetwork,
       roadAreaHectares,
       computedDevelopableAreaHectares: finalDevelopable,
+      landAreaHectares: modeledAreaHectares,
       population: finalPop,
       totalLandValue: Math.round(finalDevelopable * 20000000), // ₹2Cr per hectare default
       isPopulationEdited: false,
       isLandValueEdited: false,
+      isAmenitiesEdited: false,
+      amenities: calculateIdealAmenities(finalPop, size),
     });
   },
   updateCell: (cellKey, updates) =>
@@ -112,13 +118,21 @@ export const usePlanStore = create<PlanState>((set, get) => ({
         [cellKey]: { ...state.gridData[cellKey], ...updates },
       },
     })),
-  setPopulation: (pop) => set({ population: pop, isPopulationEdited: true }),
+  setPopulation: (pop) => {
+    const { isAmenitiesEdited, gridSize } = get();
+    const updates: Partial<PlanState> = { population: pop, isPopulationEdited: true };
+    if (!isAmenitiesEdited) {
+      updates.amenities = calculateIdealAmenities(pop, gridSize);
+    }
+    set(updates);
+  },
   setTotalLandValue: (val) => set({ totalLandValue: val, isLandValueEdited: true }),
   setLandAreaHectares: (landArea) => set({ landAreaHectares: landArea }),
   setBlockSizeMeters: (blockSize) => set({ blockSizeMeters: blockSize }),
   setAmenityCount: (type, count) =>
     set((state) => ({
       amenities: { ...state.amenities, [type]: count },
+      isAmenitiesEdited: true,
     })),
   setGridLocked: (locked) => set({ isGridLocked: locked }),
   generateCityPlan: async () => {
@@ -190,7 +204,7 @@ export const usePlanStore = create<PlanState>((set, get) => ({
     });
   },
   toggleBlockAvailability: (cellKey) => {
-    const { gridData, blockSizeMeters, landAreaHectares, population } = get();
+    const { gridData, blockSizeMeters, population } = get();
     const target = gridData[cellKey];
     if (!target) return;
     if (target.type !== "residential" && target.type !== "disabled") return;
@@ -207,15 +221,19 @@ export const usePlanStore = create<PlanState>((set, get) => ({
       },
     };
 
+    const activeCellsCount = Object.values(newGrid).filter(c => c.type !== 'disabled').length;
+    const modeledAreaHectares = activeCellsCount * ((blockSizeMeters * blockSizeMeters) / 10000);
+
     const roadNetwork = generateRoadNetwork(newGrid, population);
     const roadAreaHectares = calculateRoadAreaHectares(roadNetwork, blockSizeMeters);
-    const finalDevelopable = Math.max(0, landAreaHectares - roadAreaHectares);
+    const finalDevelopable = Math.max(0, modeledAreaHectares - roadAreaHectares);
 
-    const { isPopulationEdited, isLandValueEdited } = get();
+    const { isPopulationEdited, isLandValueEdited, isAmenitiesEdited, gridSize } = get();
     const updates: Partial<PlanState> = {
       gridData: newGrid,
       roadNetwork,
       roadAreaHectares,
+      landAreaHectares: modeledAreaHectares,
       computedDevelopableAreaHectares: finalDevelopable,
     };
 
@@ -224,6 +242,9 @@ export const usePlanStore = create<PlanState>((set, get) => ({
     }
     if (!isLandValueEdited) {
       updates.totalLandValue = Math.round(finalDevelopable * 20000000);
+    }
+    if (!isAmenitiesEdited) {
+      updates.amenities = calculateIdealAmenities(updates.population || population, gridSize);
     }
 
     set(updates);
@@ -238,7 +259,8 @@ export const usePlanStore = create<PlanState>((set, get) => ({
     initMode: null,
     isPopulationEdited: false,
     isLandValueEdited: false,
-    amenities: { school: 0, hospital: 0, park: 0, supermarket: 0, bus_station: 0, community_center: 0 },
+    isAmenitiesEdited: false,
+    amenities: calculateIdealAmenities(50000, 15),
   }),
   clearAmenities: () => {
     const { gridData, blockSizeMeters, landAreaHectares, population } = get();

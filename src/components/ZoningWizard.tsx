@@ -32,16 +32,7 @@ export default function ZoningWizard() {
     generateCityPlan,
   } = usePlanStore();
 
-  const didSeedAmenities = useRef(false);
-
   const idealAmenities = useMemo(() => calculateIdealAmenities(population, gridSize), [population, gridSize]);
-
-  useEffect(() => {
-    if (!didSeedAmenities.current && Object.values(amenities).every(v => v === 0)) {
-      Object.entries(idealAmenities).forEach(([key, val]) => setAmenityCount(key, val));
-      didSeedAmenities.current = true;
-    }
-  }, [amenities, idealAmenities, setAmenityCount]);
 
   const formatINR = (value: number) => {
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(value);
