@@ -17,7 +17,7 @@ export default function Sidebar() {
   if (hasGeneratedPlan) currentStep = 3;
 
   return (
-    <motion.aside 
+    <motion.aside
       initial={{ x: -20, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       className="w-20 glass-panel-dark h-full flex flex-col items-center relative text-slate-100 py-6"
@@ -31,33 +31,25 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex-1 w-full space-y-4 overflow-y-auto dark-scroll flex flex-col items-center mt-4">
-        <NavItem 
-          icon={<Map size={22} />} 
-          label="Topography Importer" 
+        <NavItem
+          icon={<Map size={22} />}
+          label="Topography Importer"
           active={currentStep === 1}
           completed={currentStep > 1}
         />
-        <NavItem 
-          icon={<SlidersHorizontal size={22} />} 
-          label="Zoning Parameters" 
+        <NavItem
+          icon={<SlidersHorizontal size={22} />}
+          label="Zoning Parameters"
           active={currentStep === 2}
           completed={currentStep > 2}
         />
-        <NavItem 
-          icon={<LayoutDashboard size={22} />} 
-          label="Analytics & Reports" 
+        <NavItem
+          icon={<LayoutDashboard size={22} />}
+          label="Analytics & Reports"
           active={currentStep === 3}
           completed={false}
         />
       </nav>
-
-      <div className="w-full mt-auto flex justify-center">
-        <Tooltip content="Project Settings" position="right">
-          <button className="flex items-center justify-center p-3 rounded-xl transition-all border bg-slate-800/60 hover:bg-slate-700/80 text-slate-300 hover:text-white border-slate-700/50 shadow-inner">
-            <Settings size={22} />
-          </button>
-        </Tooltip>
-      </div>
     </motion.aside>
   );
 }
@@ -65,13 +57,12 @@ export default function Sidebar() {
 function NavItem({ icon, label, active = false, completed = false }: { icon: React.ReactNode, label: string, active?: boolean, completed?: boolean }) {
   return (
     <Tooltip content={label} position="right">
-      <button className={`flex items-center justify-center p-3 rounded-xl transition-all border ${
-        active 
-          ? "bg-primary/20 border-primary/30 text-white shadow-[0_0_15px_rgba(99,102,241,0.1)]" 
+      <button className={`flex items-center justify-center p-3 rounded-xl transition-all border ${active
+          ? "bg-primary/20 border-primary/30 text-white shadow-[0_0_15px_rgba(99,102,241,0.1)]"
           : completed
             ? "bg-transparent border-transparent text-slate-400 hover:bg-slate-800/40"
             : "bg-transparent border-transparent text-slate-500 hover:bg-slate-800/40"
-      }`}>
+        }`}>
         <div className={`relative ${active ? "text-primary-light" : completed ? "text-success" : ""}`}>
           {completed ? <CheckCircle2 size={22} /> : icon}
         </div>
