@@ -16,18 +16,24 @@ This document outlines the core features, how the engine works, and the standard
 ### B. Intelligent Zoning & Infrastructure Setup
 - **Automated Parameter Bounding**: When a project is initialized with a specific size, the engine automatically calculates the target population, required land area, and ideal number of amenities.
 - **Dynamic Recalculation**: If users disable (remove) specific blocks in the interactive grid, the total developable land shrinks, which in turn automatically scales down the target population, land value, and amenity requirements in real time.
+- **Intelligent Overrides & Fallbacks**: Users can manually edit key inputs (population, land value, number of amenities). The system tracks manual overrides using isolated state flags. If a value is left as default, it remains active for automated spatial recalculation. 
 
-### C. Automated Layout Generation
+### C. Automated Layout Generation & Spatial Iteration
 - **A* Style Amenity Placement**: The system uses a multi-constraint optimization penalty algorithm to place amenities (schools, hospitals, parks) optimally across the grid.
 - **Road Network Routing**: Generates a grid-based road network with varying lane configurations intelligently derived from local demand.
 - **Proportional Economics Model**: Land values are distributed across individual residential blocks based on a composite "Desirability Weight" factoring in accessibility to amenities and roads.
 
-### D. Municipal Analytics Dashboard
+### D. Interactive Grid Manipulation & Scenario Planning
+- **Dynamic Drag & Drop Relocation**: Once the city layout is generated, users can manually drag amenities from their heuristic positions onto other residential blocks. This action triggers an immediate, on-the-fly economic mapping recalculation, allowing developers to test alternative spatial planning options rapidly.
+- **Visualization Toggle Modes**: Switch in real time between a standard color-coded "Zoning Map" layout and an analytics-driven "Economics Heatmap" that gradients grid parcels from highest accessibility and wealth down to core baselines.
+- **Granular Layout Controls**: Users can run mass deletions via the "Clear Amenities" action or unlock boundaries dynamically to redesign layouts at the block level.
+
+### E. Municipal Analytics Dashboard
 - **Traffic Level of Service (LOS)**: Calculates daily trips and peak-hour load across the generated road network to output a Volume-to-Capacity (V/C) ratio and LOS grade.
 - **Environmental Impact & Water**: Computes required green cover per capita versus provided park space, alongside CPHEEO standards for daily water demand and wastewater generation.
 - **Budget Forecast**: Estimates total Capital Expenditure (CapEx) and operational costs (OpEx) for the deployed infrastructure.
 
-### E. Professional Reporting
+### F. Professional Reporting
 - **PDF Export Engine**: Generates a multi-page, academic-grade executive summary of the simulated city, including a snapshot of the map, legend, metric highlights, and comprehensive infrastructure tables.
 
 ---
@@ -67,7 +73,7 @@ Roads are drawn between adjacent grid cells. For every resulting line (corridor)
 -   Collector status is triggered by normal residential density.
 -   Local status serves inactive or low-density block dividers. 
 
-### C. Proportional Economics Model
+### C. Proportional Economics & Accessibility Model
 Found in `src/lib/algorithms.ts` (`calculateEconomics`).
 Land value is not static but dynamically driven by spatial proximity.
 1.  **Accessibility Score Generator**: Every residential block calculates its distance to every amenity in the city. The scoring uses the "Distance Decay" model—blocks closer to the amenity get higher scores, dropping to 0 outside the 15-minute city radius (e.g., 800m for schools).
