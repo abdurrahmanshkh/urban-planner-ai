@@ -434,34 +434,65 @@ While the current system delivers a comprehensive and production-ready municipal
 # References
 
 [1] Y. Li, Q. Wang, and J. Liu, “Artificial Intelligence for Urban Planning—A New Planning Process,” MDPI, 2024. [Online]. Available: https://www.mdpi.com/2413-8851/9/9/336.
+
 [2] M. Smith et al., “Machine Learning Algorithms for Urban Land Use Planning: A Review,” MDPI, 2024. [Online]. Available: https://www.mdpi.com/2413-8851/5/3/68.
+
 [3] A. Johnson, “Evolving from Rules to Learning in Urban Modeling and Planning Support Systems,” MDPI, 2024. [Online]. Available: https://www.mdpi.com/2413-8851/9/12/508.
+
 [4] Y. Li, Q. Wang, and J. Liu, “An Artificial Intelligence Urban-Planning Model Using Reinforcement Learning and Graph Neural Networks,” Nature Communications on Urban Science, vol. 15, pp. 1–14, 2024.
-[5] J. Shen, F. Zheng, T. Chen, W. Deng, A. Bellotti, F. B. Tesema, and E. Lucchi, “Optimizing Urban Land-Use Through Deep Reinforcement Learning: A Case Study in Hangzhou for Reducing Carbon Emissions,” Land, vol. 14, no. 12, p. 2368, 2025. 
+
+[5] J. Shen, F. Zheng, T. Chen, W. Deng, A. Bellotti, F. B. Tesema, and E. Lucchi, “Optimizing Urban Land-Use Through Deep Reinforcement Learning: A Case Study in Hangzhou for Reducing Carbon Emissions,” Land, vol. 14, no. 12, p. 2368, 2025.
+
 [6] K. Tuncay et al., “From mapping to decision making: a hybrid rule-based and machine learning approach,” Frontiers in Environmental Science, 2024. [Online]. Available: https://www.frontiersin.org/journals/environmental-science/articles/10.3389/fenvs.2026.1791582/full.
-[7] C. Moreno, Z. Allam, D. Chabaud, C. Gall, and F. Pratlong, “Introducing the ‘15-Minute City’: Sustainability, Resilience and Place Identity in Future Post-Pandemic Cities,” Smart Cities, vol. 4, no. 1, pp. 93–111, 2021. 
+
+[7] C. Moreno, Z. Allam, D. Chabaud, C. Gall, and F. Pratlong, “Introducing the ‘15-Minute City’: Sustainability, Resilience and Place Identity in Future Post-Pandemic Cities,” Smart Cities, vol. 4, no. 1, pp. 93–111, 2021.
+
 [8] N. Nilsson, “A* Algorithm,” IEEE TRANSACTIONS OF SYSTEMS SCIENCE AND CYBERNETICS, vol. SSC-4, no. 2, July 1968.
+
 [9] S. Patel and M. Kumar, “Data-Driven Accessibility Analysis in Urban Planning Using Machine Learning,” IEEE Access, vol. 12, pp. 112340–112355, 2024.
+
 [10] P. Zhang, “ARTIFICIAL INTELLIGENCE-DRIVEN AUTOMATED BUILDING CODE COMPLIANCE CHECKING,” Purdue University Graduate School, 2024. [Online]. Available: https://hammer.purdue.edu/articles/thesis/ARTIFICIAL_INTELLIGENCE-DRIVEN_AUTOMATED_BUILDING_CODE_COMPLIANCE_CHECKING/30828740.
-[11] Town and Country Planning Organisation, Urban and Regional Development Plans Formulation and Implementation (URDPFI) Guidelines. New Delhi, India: Ministry of Urban Development, 2014. 
+
+[11] Town and Country Planning Organisation, Urban and Regional Development Plans Formulation and Implementation (URDPFI) Guidelines. New Delhi, India: Ministry of Urban Development, 2014.
+
 [12] Central Public Health and Environmental Engineering Organisation (CPHEEO), Manual on Water Supply and Treatment, 3rd ed. New Delhi, India: Ministry of Urban Development, May 1999.
+
 [13] Indian Roads Congress (IRC), Geometric Design Standards for Urban Roads in Plains (IRC:86-1983). New Delhi, India: IRC, 1983.
+
 [14] L. Torres et al., “EXPLAINABLE AI IN SMART CITY MANAGEMENT: TRANSPARENT DECISION-MAKING FOR URBAN SUSTAINABILITY,” ResearchGate, 2024. [Online]. Available: https://www.researchgate.net/publication/400537166_EXPLAINABLE_AI_IN_SMART_CITY_MANAGEMENT_TRANSPARENT_DECISION-MAKING_FOR_URBAN_SUSTAINABILITY.
+
 [15] Columbia Human Rights Law Review, “Locked Out by Big Data: How Big Data, Algorithms, and Machine Learning May Undermine Housing Justice,” 2024. [Online]. Available: https://hrlr.law.columbia.edu/hrlr/locked-out-by-big-data-how-big-data-algorithms-and-machine-learning-may-undermine-housing-justice/.
+
 [16] Datagrid, “Automate Zoning Permit Analysis With AI Agents,” 2024. [Online]. Available: https://datagrid.com/blog/ai-automate-zoning-permit-compliance.
+
 [17] Y. Zhang, H. Chen, and D. Zhao, “Deep Reinforcement Learning for Automatic Road Planning in Slum Upgrading,” IEEE Transactions on Intelligent Transportation Systems, vol. 25, no. 2, pp. 2143–2157, 2023.
+
 [18] J. Lin, X. Huang, and M. Chen, “AI in Architecture and Urban Design and Planning: Case Studies on Three AI Applications,” Journal of Architectural Planning Research, vol. 41, no. 3, pp. 201–220, 2023.
+
 [19] K. Tan, S. Li, and F. Zhao, “UrbanWorld: A Generative Model for Creating Realistic and Interactive 3D Urban Environments,” ACM Transactions on Graphics, vol. 43, no. 6, pp. 1–15, 2024.
+
 [20] F. Alvarez, R. Gomez, and L. Torres, “Predictive Land Value Modelling Using Spatial Regression and AI Techniques,” International Journal of Geographical Information Science, vol. 38, no. 7, pp. 1356–1371, 2023.
+
 [21] J. Garcia and P. Smith, “Smart City Design Optimisation Through AI-Based Layout Planning,” Urban Computing and Intelligence Journal, vol. 9, no. 1, pp. 55–72, 2024.
+
 [22] P. Jaiswal, P. Nigam, and S. Pipralia, “Evaluating Land Valuation Techniques and Urban Development Practices in India,” in Proceedings of the SUPTM Conference, 2022.
+
 [23] K. Bhowmick, “Clustering Analysis for Residential Areas Based on Neighbourhood Amenities,” International Journal of Advanced Research, vol. 9, no. 1, pp. 957–965, Jan. 2021.
+
 [24] M. Johnson and T. Brown, “Reinforcement Learning for Sustainable City Design,” Proceedings of the AAAI Conference on Artificial Intelligence, vol. 37, pp. 4420–4432, 2023.
+
 [25] C. Müller and D. Roberts, “Procedural Urban Modelling for Smart City Simulation,” Computers, Environment and Urban Systems, vol. 98, pp. 1–12, 2023.
+
 [26] L. Zhao and R. Han, “Optimisation Techniques for Multi-Objective Urban Layout Generation,” Sustainable Cities and Society, vol. 96, p. 104650, 2024.
+
 [27] D. Kim and J. Park, “Graph-Based Simulation for Automated Urban Infrastructure Planning,” Automation in Construction, vol. 160, p. 105392, 2024.
+
 [28] R. Singh and A. Mehta, “AI-Driven Design in Smart Cities: Challenges and Opportunities,” IEEE Smart City Transactions, vol. 11, no. 4, pp. 299–312, 2023.
+
 [29] T. Nguyen and L. Tran, “Machine Learning Approaches for Predicting Urban Growth and Land Use,” ISPRS International Journal of Geo-Information, vol. 12, no. 3, pp. 421–437, 2023.
+
 [30] Yale Urban Design Workshop, "Code Shift: Using AI to Analyze Zoning Reform in American Cities," Yale University, 2024. [Online]. Available: https://urban.yale.edu/projects/code-shift-using-ai-analyze-zoning-reform-american-cities.
+
 [31] Esri India, "AI-Enabled Urban Infrastructure Management," ArcIndia News, 2024. [Online]. Available: https://www.esri.in/en-in/esri-news/publications/arcindia-news/research-paper/ai-enabled-urban-infrastructure-management.
+
 [32] McKinsey & Company, "How AI-native public infrastructure changes how cities operate," McKinsey Tech Forward, 2024. [Online]. Available: https://www.mckinsey.com/capabilities/tech-and-ai/our-insights/tech-forward/how-ai-native-public-infrastructure-changes-how-cities-operate.
