@@ -17,8 +17,10 @@ This is a comprehensive technical breakdown of your **UrbanPlan AI** project, st
 *   **Topography Extraction**: When a user uploads a boundary image, the system uses a **Flood-Fill algorithm** on a hidden canvas to identify "developable" pixels versus "empty" pixels.
 *   **Dynamic Resolution Estimation**: 
     *   The system takes the target **Land Area (Hectares)** and the desired **Block Size (Meters)**.
-    *   It calculates the total grid cells ($N \times N$) required to fit that area using the formula: 
-      $$\text{Cells} = \frac{\text{Total Area (sqm)}}{\text{Block Size (sqm)} \times \text{Fill Ratio}}$$
+    *   It calculates the total grid cells ($N \times N$) required to fit that area using the formula:
+
+$$ \text{Cells} = \frac{\text{Total Area (sqm)}}{\text{Block Size (sqm)} \times \text{Fill Ratio}} $$
+
 *   **Auto-Zoning**: Upon initialization, the system calculates the **Ideal Population** based on the URDPFI-standard density limit (capped at **250 pph**).
 
 ---
@@ -43,7 +45,8 @@ Your system isn't just picking numbers; it follows the **URDPFI (Urban & Regiona
 This is the "AI" part of your project. Instead of random placement, it uses a **Constraint-Based Penalty Heuristic**.
 
 **The Calculation**: For every amenity, the system scores every potential residential block ($i, j$) using a penalty function:
-$$Score = (P_{\text{dist}} \times 1.8) + (P_{\text{center}} \times 0.4) + P_{\text{spacing}} + P_{\text{global\_happiness}}$$
+
+$$ \text{Score} = (P_{\text{dist}} \times 1.8) + (P_{\text{center}} \times 0.4) + P_{\text{spacing}} + P_{\text{global\_happiness}} $$
 
 1.  **Distance Penalty ($P_{\text{dist}}$)**: Ensures amenities are spread out to cover the entire grid.
 2.  **Centrality Penalty ($P_{\text{center}}$)**: Keeps amenities accessible but not congested.
@@ -64,7 +67,8 @@ This explains why one block costs more than another. It uses a **Distance Decay 
     *   The user inputs a "Total City Land Value" (e.g., ₹500 Cr).
     *   The system sums all accessibility weights for the entire grid.
     *   A block's individual value is calculated as:
-      $$\text{Block Value} = \text{Total Value} \times \left( \frac{\text{Block Weight}}{\sum \text{All Weights}} \right)$$
+
+$$ \text{Block Value} = \text{Total Value} \times \left( \frac{\text{Block Weight}}{\sum \text{All Weights}} \right) $$
 
 ---
 
