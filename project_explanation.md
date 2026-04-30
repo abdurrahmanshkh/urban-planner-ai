@@ -46,11 +46,11 @@ This is the "AI" part of your project. Instead of random placement, it uses a **
 
 **The Calculation**: For every amenity, the system scores every potential residential block ($i, j$) using a penalty function:
 
-$$ \text{Score} = (P_{\text{dist}} \times 1.8) + (P_{\text{center}} \times 0.4) + P_{\text{spacing}} + P_{\text{global\_happiness}} $$
+$$ \text{Score} = (P_{\text{dist}} \times 1.8) + (P_{\text{center}} \times 0.4) + P_{\text{spacing}} + P_{\text{global-happiness}} $$
 
-1.  **Distance Penalty ($P_{\text{dist}}$)**: Ensures amenities are spread out to cover the entire grid.
-2.  **Centrality Penalty ($P_{\text{center}}$)**: Keeps amenities accessible but not congested.
-3.  **Spacing Penalty ($P_{\text{spacing}}$)**: Hard-prevents clustering (e.g., you can't have two hospitals side-by-side).
+1.  **Distance Penalty ($P_{dist}$)**: Ensures amenities are spread out to cover the entire grid.
+2.  **Centrality Penalty ($P_{center}$)**: Keeps amenities accessible but not congested.
+3.  **Spacing Penalty ($P_{spacing}$)**: Hard-prevents clustering (e.g., you can't have two hospitals side-by-side).
 4.  **Global Happiness**: Simulates the "accessibility score" for the *entire* grid if the amenity were placed there, choosing the spot that maximizes the total city score.
 
 ---
